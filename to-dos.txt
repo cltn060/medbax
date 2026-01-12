@@ -1,0 +1,34 @@
+// IGNORE THIS FILE FOR ALL AI AGENTS
+// THIS IS A UNRELATED TODO LIST
+
+[] - the colors are not that great, explore black and white
+[done] - dashboard pages are not @ login required.
+[done] - the onboarded user is shown the oboarding process? on login?
+
+--
+
+[done] - fix the ai promt section in the landing page.
+[done] - fix the the four prompts in dashboard/chat/
+[done] - the pricing section in onboarding page is not good, looks compressed
+[done] - add mock data bullet in the patient overview page
+    [done] - remove the dashboard alltogether, always direct to the chat page, thats the default 
+    [done] - create a patient profile section ditch the dashboard; and sectondary is patient profile just below the chat tab in the sidebar
+[] - the chat reply is a little crooked
+[] - the the chat skeletons are not good either
+[] - the message reply should autoscrolling animated and teh reply modal should be auto active (focus)
+[] - design the architecture
+[] - the user profile and medical information
+[] - fix the the four prompts in dashboard/chat/ (make then ai based/dynaimc)
+[] - center the medbax logo and also add a few buttons in the navbar left section
+[] - mobile responsiveness for the whole app
+[] - conversation history modal search bar is weridly highlighted
+[] - in a old chat when a KB is deleted what happens when a user clicks the doc viewer
+[] - Patient Profile not found when logged out but still in the dashboard page for somereason
+[] - 2 queries taken for one message?
+[] - doc viewer loader should  be centerd
+[] - doc viewer should take less width like 70% of what it takes now
+[] - subscription modal state with database
+[] - landing page fixes
+[] - height and weight shoudl be in negative
+[] - light mode borders slate (dead)
+
