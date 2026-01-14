@@ -149,5 +149,6 @@ const resolvedUrl = patientDoc?.fileUrl || kbDocByChroma?.url || kbDocUrlFallbac
 
 ## Related Documentation
 
-- **v1 Implementation:** [`chat_implementation_v1.md`](file:///c:/personalData/devProjects/saas-medical/implementation/chat/chat_implementation_v1.md)
-- **Architecture:** [`THREE_TIER_ARCHITECTURE.md`](file:///c:/personalData/devProjects/saas-medical/docs/THREE_TIER_ARCHITECTURE.md)
+- **v1 Implementation:** [`chat_implementation_v1.md`](file:///c:/personalData/devProjects/medbax/implementation/chat/chat_implementation_v1.md)
+- **Knowledge Bases:** [`knowledge_bases_implementation_v1.md`](file:///c:/personalData/devProjects/medbax/implementation/knowledge-bases/knowledge_bases_implementation_v1.md)
+- **Architecture:** [`THREE_TIER_ARCHITECTURE.md`](file:///c:/personalData/devProjects/medbax/docs/THREE_TIER_ARCHITECTURE.md)

@@ -6,10 +6,11 @@ Feature-based implementation documentation for MedBax.
 
 ```
 implementation/
-├── architecture/     # System-wide architecture docs
 ├── chat/             # AI chat feature implementation
-├── schema/           # Database schema & data models
-└── api/              # API layer (FastAPI RAG backend)
+├── knowledge-bases/  # Knowledge bases (RAG collections) feature
+├── marketing/        # Marketing pages implementation
+├── subscriptions/    # Stripe subscription implementation
+└── _TEMPLATE.md      # Template for new feature docs
 ```
 
 ## Document Naming

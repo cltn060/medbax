@@ -7,13 +7,15 @@ import tempfile
 import shutil
 import uuid
 import json
+import logging
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -23,6 +25,62 @@ from dotenv import load_dotenv
 
 # Load .env from parent directory
 load_dotenv(Path(__file__).parent / ".env")
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class RequestResponseLoggingMiddleware(BaseHTTPMiddleware):
+    """Middleware to log all incoming requests and outgoing responses."""
+    
+    async def dispatch(self, request: Request, call_next):
+        # Log request info
+        logger.info("=" * 60)
+        logger.info(f"📥 INCOMING REQUEST")
+        logger.info(f"   Method: {request.method}")
+        logger.info(f"   URL: {request.url}")
+        logger.info(f"   Path: {request.url.path}")
+        logger.info(f"   Query Params: {dict(request.query_params)}")
+        logger.info(f"   Headers:")
+        for key, value in request.headers.items():
+            # Skip logging sensitive headers or large values
+            if key.lower() not in ['authorization', 'cookie']:
+                logger.info(f"      {key}: {value}")
+        
+        # Try to read and log the body (only for non-file uploads)
+        content_type = request.headers.get('content-type', '')
+        if 'multipart/form-data' not in content_type:
+            try:
+                body = await request.body()
+                if body:
+                    try:
+                        # Try to parse as JSON for pretty printing
+                        body_json = json.loads(body)
+                        logger.info(f"   Body (JSON): {json.dumps(body_json, indent=2)}")
+                    except json.JSONDecodeError:
+                        # Log as raw string if not JSON
+                        body_str = body.decode('utf-8', errors='replace')[:1000]
+                        logger.info(f"   Body (Raw): {body_str}")
+            except Exception as e:
+                logger.info(f"   Body: [Could not read: {e}]")
+        else:
+            logger.info(f"   Body: [Multipart form data - file upload]")
+        
+        # Process the request
+        try:
+            response = await call_next(request)
+            
+            # Log response info
+            logger.info(f"📤 OUTGOING RESPONSE")
+            logger.info(f"   Status Code: {response.status_code}")
+            logger.info("=" * 60)
+            
+            return response
+        except Exception as e:
+            logger.error(f"❌ ERROR during request processing: {e}")
+            logger.error("=" * 60)
+            raise
 
 # Import modules
 from config import CHUNK_SIZE, CHUNK_OVERLAP
@@ -50,14 +108,25 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Request/Response logging middleware (added first, runs last - after CORS)
+app.add_middleware(RequestResponseLoggingMiddleware)
+
 # CORS middleware for Next.js frontend
+# TODO: Restrict origins after debugging - using wildcard temporarily
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://medbax.vercel.app", "http://medbax.vercel.app/"],
-    allow_credentials=True,
+    allow_origins=["*"],  # Temporarily allow all for debugging
+    allow_credentials=False,  # Must be False when using wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Log the origin of incoming requests to debug CORS
+@app.middleware("http")
+async def log_origin(request: Request, call_next):
+    origin = request.headers.get("origin", "No origin header")
+    logger.info(f"🌐 Request from origin: {origin}")
+    return await call_next(request)
 
 # ============================================================================
 # Pydantic Models

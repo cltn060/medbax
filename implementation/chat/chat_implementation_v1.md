@@ -73,11 +73,11 @@ flowchart TB
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| [`src/components/chat/ChatInterface.tsx`](file:///c:/personalData/devProjects/saas-medical/src/components/chat/ChatInterface.tsx) | 624 | Main chat UI with streaming, KB selector, citation handling |
-| [`src/components/chat/ChatHistoryModal.tsx`](file:///c:/personalData/devProjects/saas-medical/src/components/chat/ChatHistoryModal.tsx) | 112 | Modal to list/navigate past conversations |
-| [`src/components/chat/PDFViewer.tsx`](file:///c:/personalData/devProjects/saas-medical/src/components/chat/PDFViewer.tsx) | 174 | react-pdf based viewer with zoom/pagination |
-| [`src/lib/rag-api.ts`](file:///c:/personalData/devProjects/saas-medical/src/lib/rag-api.ts) | 304 | FastAPI client for RAG operations |
-| [`convex/chats.ts`](file:///c:/personalData/devProjects/saas-medical/convex/chats.ts) | 105 | Convex mutations/queries for chat CRUD |
+| [`src/components/chat/ChatInterface.tsx`](file:///c:/personalData/devProjects/medbax/src/components/chat/ChatInterface.tsx) | 624 | Main chat UI with streaming, KB selector, citation handling |
+| [`src/components/chat/ChatHistoryModal.tsx`](file:///c:/personalData/devProjects/medbax/src/components/chat/ChatHistoryModal.tsx) | 112 | Modal to list/navigate past conversations |
+| [`src/components/chat/PDFViewer.tsx`](file:///c:/personalData/devProjects/medbax/src/components/chat/PDFViewer.tsx) | 174 | react-pdf based viewer with zoom/pagination |
+| [`src/lib/rag-api.ts`](file:///c:/personalData/devProjects/medbax/src/lib/rag-api.ts) | 304 | FastAPI client for RAG operations |
+| [`convex/chats.ts`](file:///c:/personalData/devProjects/medbax/convex/chats.ts) | 105 | Convex mutations/queries for chat CRUD |
 
 ### Core Data Flow
 
@@ -264,6 +264,6 @@ const resolvedUrl = isPatientDoc ? patientDoc?.fileUrl : kbDocUrl;
 
 ## Related Documentation
 
-- **Architecture:** [THREE_TIER_ARCHITECTURE.md](file:///c:/personalData/devProjects/saas-medical/docs/THREE_TIER_ARCHITECTURE.md)
-- **Schema:** `implementation/schema/` (TBD)
-- **API:** `implementation/api/` (TBD)
+- **Architecture:** [THREE_TIER_ARCHITECTURE.md](file:///c:/personalData/devProjects/medbax/docs/THREE_TIER_ARCHITECTURE.md)
+- **Knowledge Bases:** [knowledge_bases_implementation_v1.md](file:///c:/personalData/devProjects/medbax/implementation/knowledge-bases/knowledge_bases_implementation_v1.md)
+- **Schema:** [convex/schema.ts](file:///c:/personalData/devProjects/medbax/convex/schema.ts)
