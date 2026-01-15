@@ -4,6 +4,35 @@
 
 const RAG_API_URL = process.env.NEXT_PUBLIC_RAG_API_URL || "http://localhost:8000";
 
+/**
+ * Helper to handle API errors, robust to non-JSON responses (e.g. HTML 404s)
+ */
+async function handleApiError(response: Response, defaultMessage: string): Promise<never> {
+    let errorDetail = "";
+    try {
+        const text = await response.text();
+        try {
+            const json = JSON.parse(text);
+            errorDetail = json.detail || json.message || text;
+        } catch {
+            // If not JSON, use the raw text (likely HTML)
+            errorDetail = text;
+        }
+    } catch {
+        errorDetail = "Could not read response body";
+    }
+
+    // Log the full error to console for debugging
+    console.error(`API Error (${response.status} ${response.statusText}):`, errorDetail);
+
+    // Throw a clean error message, truncating if too long for UI
+    const displayMessage = errorDetail.length > 500
+        ? errorDetail.substring(0, 500) + "..."
+        : errorDetail;
+
+    throw new Error(`${defaultMessage}: ${displayMessage}`);
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -84,8 +113,7 @@ export async function createCollection(collectionId: string, name: string): Prom
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to create collection");
+        await handleApiError(response, "Failed to create collection");
     }
 }
 
@@ -98,8 +126,7 @@ export async function deleteCollection(collectionId: string): Promise<DeleteResp
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to delete collection");
+        await handleApiError(response, "Failed to delete collection");
     }
 
     return response.json();
@@ -112,8 +139,7 @@ export async function getCollectionStats(collectionId: string): Promise<Collecti
     const response = await fetch(`${RAG_API_URL}/collections/${collectionId}/stats`);
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to get collection stats");
+        await handleApiError(response, "Failed to get collection stats");
     }
 
     return response.json();
@@ -130,8 +156,7 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse>
     const response = await fetch(`${RAG_API_URL}/tasks/${taskId}`);
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to get task status");
+        await handleApiError(response, "Failed to get task status");
     }
 
     return response.json();
@@ -208,8 +233,7 @@ export async function uploadDocument(
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to upload document");
+        await handleApiError(response, "Failed to upload document");
     }
 
     const uploadTask: UploadTaskResponse = await response.json();
@@ -240,8 +264,7 @@ export async function deleteDocument(
     );
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to delete document");
+        await handleApiError(response, "Failed to delete document");
     }
 
     return response.json();
@@ -254,8 +277,7 @@ export async function listDocuments(collectionId: string): Promise<DocumentInfo[
     const response = await fetch(`${RAG_API_URL}/embeddings/${collectionId}`);
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to list documents");
+        await handleApiError(response, "Failed to list documents");
     }
 
     const data = await response.json();
@@ -284,8 +306,7 @@ export async function queryKnowledgeBase(
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to query knowledge base");
+        await handleApiError(response, "Failed to query knowledge base");
     }
 
     const data = await response.json();
@@ -331,8 +352,7 @@ export async function queryKnowledgeBaseStream(
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || "Failed to query knowledge base");
+            await handleApiError(response, "Failed to query knowledge base");
         }
 
         const reader = response.body?.getReader();
@@ -419,8 +439,7 @@ export async function generalChatStream(
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || "Failed to get AI response");
+            await handleApiError(response, "Failed to get AI response");
         }
 
         const reader = response.body?.getReader();
@@ -458,7 +477,7 @@ export async function checkHealth(): Promise<{
     const response = await fetch(`${RAG_API_URL}/`);
 
     if (!response.ok) {
-        throw new Error("RAG backend is not available");
+        await handleApiError(response, "RAG backend health check failed");
     }
 
     return response.json();
