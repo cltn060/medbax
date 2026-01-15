@@ -42,8 +42,36 @@ yarn-error.log*
 next-env.d.ts
 
 
-# Python cache
-fast/__pycache__/
+# Python cache and compiled files
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 
-# Chroma vector DB storage
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Vector database storage
 fast/chroma_storage/
+fastV2/chroma_storage/
+fast/lancedb_storage/
+fastV2/lancedb_storage/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
