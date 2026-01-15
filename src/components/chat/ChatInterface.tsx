@@ -267,17 +267,14 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
         const sections = [];
 
-        if (patient.name) {
-            sections.push(`Patient Name: ${patient.name}`);
-        }
         if (patient.dateOfBirth) {
             sections.push(`Date of Birth: ${patient.dateOfBirth}`);
         }
         if (patient.bloodType) {
             sections.push(`Blood Type: ${patient.bloodType}`);
         }
-        if (patient.conditions && patient.conditions.length > 0) {
-            sections.push(`Medical Conditions: ${patient.conditions.map((c: any) => c.condition).join(", ")}`);
+        if (patient.chronicConditions && patient.chronicConditions.length > 0) {
+            sections.push(`Medical Conditions: ${patient.chronicConditions.map((c: any) => c.condition).join(", ")}`);
         }
         if (patient.allergies && patient.allergies.length > 0) {
             sections.push(`Allergies: ${patient.allergies.map((a: any) => `${a.agent} (${a.reactionType})`).join(", ")}`);
@@ -291,14 +288,13 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         if (patient.familyHistory && patient.familyHistory.length > 0) {
             sections.push(`Family History: ${patient.familyHistory.map((f: any) => `${f.relation}: ${f.condition}`).join(", ")}`);
         }
-        if (patient.lifestyle) {
+        if (patient.socialHistory) {
             const lifestyleItems = [];
-            if (patient.lifestyle.smoking) lifestyleItems.push(`Smoking: ${patient.lifestyle.smoking}`);
-            if (patient.lifestyle.alcohol) lifestyleItems.push(`Alcohol: ${patient.lifestyle.alcohol}`);
-            if (patient.lifestyle.exercise) lifestyleItems.push(`Exercise: ${patient.lifestyle.exercise}`);
-            if (patient.lifestyle.diet) lifestyleItems.push(`Diet: ${patient.lifestyle.diet}`);
+            if (patient.socialHistory.smokingStatus) lifestyleItems.push(`Smoking: ${patient.socialHistory.smokingStatus}`);
+            if (patient.socialHistory.alcoholConsumption) lifestyleItems.push(`Alcohol: ${patient.socialHistory.alcoholConsumption}`);
+            if (patient.socialHistory.occupation) lifestyleItems.push(`Occupation: ${patient.socialHistory.occupation}`);
             if (lifestyleItems.length > 0) {
-                sections.push(`Lifestyle: ${lifestyleItems.join("; ")}`);
+                sections.push(`Social History: ${lifestyleItems.join("; ")}`);
             }
         }
 
