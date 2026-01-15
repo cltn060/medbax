@@ -514,10 +514,9 @@ function UploadModal({
                 currentFile,
                 chromaDocumentId,
                 (status: TaskStatusResponse) => {
-                    // Update parent with specific status details if available
-                    if (status?.status) {
-                        onUploadProgress(uploadId, `Processing: ${status.status}`);
-                    }
+                    // FIX: Ensure we access properties that actually exist on TaskStatusResponse
+                    const msg = status.result?.status || status.state;
+                    onUploadProgress(uploadId, `Processing: ${msg}`);
                 },
                 currentFastMode
             );
