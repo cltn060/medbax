@@ -26,8 +26,8 @@ interface ChatInterfaceProps {
 
 interface Source {
     title: string;
-    snippet: string;
-    sourceType: "kb_document" | "patient_document" | "chat_attachment";
+    snippet?: string;
+    sourceType?: "kb_document" | "patient_document" | "chat_attachment";
     kbDocumentId?: Id<"knowledgeBaseDocuments">;
     patientDocumentId?: Id<"documents">;
     chatAttachmentId?: string;
