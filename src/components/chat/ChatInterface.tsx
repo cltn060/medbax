@@ -124,6 +124,17 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         sourceType === "patient_document" ? patientDoc?.fileUrl :
             (kbDocByChroma?.url || kbDocUrlFallback);
 
+    // Calculate loading state specifically for the URL resolution
+    // If resolvedUrl is null, it means we finished loading but found nothing.
+    // We only want to show loading if the specific queries we depend on are still undefined (Convex loading state)
+    const isLoadingUrl = sourceType === "patient_document"
+        ? patientDoc === undefined
+        : (
+            viewingSource?.chromaDocumentId
+                ? (kbDocByChroma === undefined || (kbDocByChroma === null && kbDocUrlFallback === undefined))
+                : (kbDocUrlFallback === undefined)
+        );
+
     // Query public knowledge bases for selector
     const publicKBs = useQuery(api.knowledgeBases.listPublic);
 
@@ -883,7 +894,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                         <PDFViewer
                             url={resolvedUrl || null}
                             fileName={viewingDocument.filename}
-                            isLoading={!resolvedUrl}
+                            isLoading={isLoadingUrl}
                             onClose={() => setViewingDocument(null)}
                             initialPage={viewingDocument.page}
                         />
