@@ -204,8 +204,8 @@ export default function KnowledgeBaseDetailPage() {
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-                        {/* Pending Uploads */}
-                        {pendingUploads.map((upload) => (
+                        {/* Pending Uploads - Filter out ones that are already in the existing documents list to avoid duplicates */}
+                        {pendingUploads.filter(upload => !documents.some(doc => doc.filename === upload.filename)).map((upload) => (
                             <div
                                 key={upload.id}
                                 className="px-5 py-4 flex items-center justify-between bg-indigo-50/50 dark:bg-indigo-950/20"
