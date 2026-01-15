@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
-import { Bot, Sparkles, Plus, Image, ArrowUp, History, Loader2, Database, ChevronDown, ExternalLink, ArrowLeft, X, Zap, User, Trash2 } from "lucide-react";
+import { Bot, Sparkles, Plus, Image, ArrowUp, History, Loader2, Database, ChevronDown, ExternalLink, ArrowLeft, X, Zap, User, Trash2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
 import { HealthSnapshotPanel } from "./HealthSnapshotPanel";
@@ -83,6 +83,9 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
     // Health Snapshot Panel State - collapsed by default
     const [healthPanelOpen, setHealthPanelOpen] = useState(false);
+
+    // Include MedBax Profile toggle - when enabled, includes patient context in prompts
+    const [includeProfile, setIncludeProfile] = useState(true);
 
     // Query patient data for health snapshot
     const patient = useQuery(api.patients.get, { id: patientId as Id<"patients"> });
@@ -181,11 +184,26 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
     }, [isKBDropdownOpen]);
 
     // Initialize selectedKB from chat's persisted knowledgeBaseId
+    // Initialize selectedKB from chat's persisted knowledgeBaseId
     useEffect(() => {
         if (currentChat?.knowledgeBaseId !== undefined) {
             setSelectedKB(currentChat.knowledgeBaseId ?? null);
         }
     }, [currentChat?.knowledgeBaseId]);
+
+    // Default to isDefault KB for new intent
+    useEffect(() => {
+        if (!chatId && publicKBs && publicKBs.length > 0 && !selectedKB) {
+            // Find default KB or fallback to first one
+            const defaultKB = publicKBs.find(kb => kb.isDefault);
+
+            if (defaultKB) {
+                setSelectedKB(defaultKB.chromaCollectionId);
+            } else {
+                setSelectedKB(publicKBs[0].chromaCollectionId);
+            }
+        }
+    }, [chatId, publicKBs, selectedKB]);
 
     // Handle pending AI response after navigation
     useEffect(() => {
@@ -243,6 +261,52 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         return () => clearTimeout(timer);
     }, [chatId, searchParams, router, sendMessageMutation]);
 
+    // Build medical context string from patient data
+    const buildMedicalContext = () => {
+        if (!patient || !includeProfile) return "";
+
+        const sections = [];
+
+        if (patient.name) {
+            sections.push(`Patient Name: ${patient.name}`);
+        }
+        if (patient.dateOfBirth) {
+            sections.push(`Date of Birth: ${patient.dateOfBirth}`);
+        }
+        if (patient.bloodType) {
+            sections.push(`Blood Type: ${patient.bloodType}`);
+        }
+        if (patient.conditions && patient.conditions.length > 0) {
+            sections.push(`Medical Conditions: ${patient.conditions.join(", ")}`);
+        }
+        if (patient.allergies && patient.allergies.length > 0) {
+            sections.push(`Allergies: ${patient.allergies.join(", ")}`);
+        }
+        if (patient.medications && patient.medications.length > 0) {
+            sections.push(`Current Medications: ${patient.medications.join(", ")}`);
+        }
+        if (patient.surgeries && patient.surgeries.length > 0) {
+            sections.push(`Surgical History: ${patient.surgeries.join(", ")}`);
+        }
+        if (patient.familyHistory && patient.familyHistory.length > 0) {
+            sections.push(`Family History: ${patient.familyHistory.join(", ")}`);
+        }
+        if (patient.lifestyle) {
+            const lifestyleItems = [];
+            if (patient.lifestyle.smoking) lifestyleItems.push(`Smoking: ${patient.lifestyle.smoking}`);
+            if (patient.lifestyle.alcohol) lifestyleItems.push(`Alcohol: ${patient.lifestyle.alcohol}`);
+            if (patient.lifestyle.exercise) lifestyleItems.push(`Exercise: ${patient.lifestyle.exercise}`);
+            if (patient.lifestyle.diet) lifestyleItems.push(`Diet: ${patient.lifestyle.diet}`);
+            if (lifestyleItems.length > 0) {
+                sections.push(`Lifestyle: ${lifestyleItems.join("; ")}`);
+            }
+        }
+
+        if (sections.length === 0) return "";
+
+        return `[PATIENT MEDICAL CONTEXT]\n${sections.join("\n")}\n[END CONTEXT]\n\n`;
+    };
+
     const handleSend = async (messageOverride?: string) => {
         const messageContent = messageOverride?.trim() || input.trim();
         if (!messageContent || sending) return;
@@ -251,6 +315,10 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         if (isAtLimit) {
             return; // UI should show upgrade prompt
         }
+
+        // Build the full message with optional medical context
+        const medicalContext = buildMedicalContext();
+        const fullMessage = medicalContext + messageContent;
 
         setSending(true);
         setStreamingResponse("");
@@ -285,7 +353,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                 });
 
                 setOptimisticUserMessage(null);
-                router.push(`/dashboard/chat/${newChatId}?pending=${encodeURIComponent(messageContent)}&kb=${selectedKB || ''}&new=true`);
+                router.push(`/dashboard/chat/${newChatId}?pending=${encodeURIComponent(fullMessage)}&kb=${selectedKB || ''}&new=true`);
                 return;
             }
 
@@ -306,7 +374,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
                 await queryKnowledgeBaseStream(
                     selectedKB,
-                    messageContent,
+                    fullMessage,
                     (chunk) => {
                         fullResponse += chunk;
                         setStreamingResponse(fullResponse);
@@ -346,7 +414,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                 }));
 
                 await generalChatStream(
-                    messageContent,
+                    fullMessage,
                     (chunk) => {
                         fullResponse += chunk;
                         setStreamingResponse(fullResponse);
@@ -687,32 +755,47 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                     </button>
 
                                     {isKBDropdownOpen && (
-                                        <div className="absolute bottom-full right-0 mb-1 w-56 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg overflow-hidden z-20">
-                                            <div className="p-2">
-                                                <div className="text-xs font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider px-2 py-1">Knowledge Bases</div>
-                                                {publicKBs?.length === 0 && (
-                                                    <div className="px-2 py-3 text-xs text-slate-500 dark:text-zinc-500">No knowledge bases available</div>
-                                                )}
-                                                {publicKBs?.map((kb) => (
-                                                    <button
-                                                        key={kb._id}
-                                                        onClick={() => {
-                                                            setSelectedKB(kb.chromaCollectionId);
-                                                            setIsKBDropdownOpen(false);
-                                                        }}
-                                                        className={cn(
-                                                            "w-full text-left px-2 py-2 rounded-md text-sm transition-colors",
-                                                            selectedKB === kb.chromaCollectionId
-                                                                ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300"
-                                                                : "text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800"
-                                                        )}
-                                                    >
-                                                        <div className="font-medium">{kb.name}</div>
-                                                        <div className="text-xs text-slate-500 dark:text-zinc-500">
-                                                            {kb.documentCount} document{kb.documentCount !== 1 ? "s" : ""}
+                                        <div className="absolute bottom-full right-0 mb-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-20 ring-1 ring-zinc-900/5 dark:ring-white/5">
+                                            <div className="p-1.5">
+                                                <div className="px-3 py-2 text-[11px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
+                                                    Current Knowledge Base
+                                                </div>
+
+                                                {selectedKB && publicKBs?.find(kb => kb.chromaCollectionId === selectedKB) && (() => {
+                                                    const currentKB = publicKBs.find(kb => kb.chromaCollectionId === selectedKB);
+                                                    return currentKB ? (
+                                                        <div className="mx-2 mb-1 p-2 bg-zinc-50/50 dark:bg-zinc-800/40 rounded-lg border border-zinc-200/50 dark:border-zinc-700/50 ring-1 ring-zinc-200/50 dark:ring-zinc-700/50">
+                                                            <div className="flex items-center gap-2.5 mb-1.5">
+                                                                <div className="p-1.5 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm shrink-0">
+                                                                    <Database className="h-3.5 w-3.5" />
+                                                                </div>
+                                                                <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                                                    {currentKB.name}
+                                                                </div>
+                                                            </div>
+                                                            {currentKB.description && (
+                                                                <div className="text-xs text-zinc-500 dark:text-zinc-400 pl-[34px] line-clamp-2 leading-relaxed">
+                                                                    {currentKB.description}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    </button>
-                                                ))}
+                                                    ) : null;
+                                                })()}
+
+                                                <div className="h-px bg-zinc-100 dark:bg-zinc-800/50 my-1 mx-2" />
+
+                                                <button
+                                                    onClick={() => {
+                                                        setKbBrowserOpen(true);
+                                                        setIsKBDropdownOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-2.5 rounded-none text-sm text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors flex items-center gap-3 group"
+                                                >
+                                                    <div className="p-1.5 items-center justify-center flex text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300 transition-colors shrink-0">
+                                                        <Database className="h-3.5 w-3.5" />
+                                                    </div>
+                                                    <span className="font-medium">Browse Knowledge Bases...</span>
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -740,13 +823,30 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                             {/* Bottom Actions */}
                             <div className="flex justify-between items-center mt-2 px-1">
                                 <div className="flex items-center gap-2">
-                                    <button className="p-2 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                                        <Plus className="h-4 w-4" />
-                                    </button>
-                                    <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-transparent hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-500 transition-colors text-sm font-medium">
-                                        <Image className="h-4 w-4" />
-                                        <span className="hidden sm:inline">Use Image</span>
-                                    </button>
+                                    {/* Include MedBax Profile Toggle */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setIncludeProfile(!includeProfile)}
+                                            title="Include Medical Profile"
+                                            className={`relative w-9 h-5 rounded-full transition-all duration-200 ${includeProfile
+                                                ? "bg-indigo-500"
+                                                : "bg-slate-300 dark:bg-zinc-600"
+                                                }`}
+                                        >
+                                            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${includeProfile
+                                                ? "left-[18px]"
+                                                : "left-0.5"
+                                                }`}
+                                            />
+                                        </button>
+                                        <button
+                                            onClick={() => setHealthPanelOpen(true)}
+                                            className="p-1 text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
+                                            title="Include Medical Profile"
+                                        >
+                                            <Info className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-4">

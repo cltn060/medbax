@@ -1,7 +1,8 @@
 "use client";
 
 import { X, User, Heart, AlertTriangle, Pill, ChevronRight } from "lucide-react";
-import Link from "next/link";
+import { useState } from "react";
+import { EditProfileModal } from "../dashboard/EditProfileModal";
 
 interface PatientData {
     _id: string;
@@ -20,6 +21,8 @@ interface HealthSnapshotPanelProps {
 }
 
 export function HealthSnapshotPanel({ patient, onClose }: HealthSnapshotPanelProps) {
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
     // Calculate age from DOB
     const calculateAge = (dob: string) => {
         const birthDate = new Date(dob);
@@ -169,14 +172,20 @@ export function HealthSnapshotPanel({ patient, onClose }: HealthSnapshotPanelPro
 
             {/* Footer */}
             <div className="p-3 border-t border-slate-200 dark:border-zinc-800">
-                <Link
-                    href="/dashboard/profile"
+                <button
+                    onClick={() => setIsProfileModalOpen(true)}
                     className="flex items-center justify-center gap-1 w-full py-2 px-3 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                 >
                     View Full Profile
                     <ChevronRight className="h-3 w-3" />
-                </Link>
+                </button>
             </div>
+
+            {/* Edit Profile Modal */}
+            <EditProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+            />
         </div>
     );
 }

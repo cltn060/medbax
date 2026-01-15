@@ -58,6 +58,7 @@ export const listPublic = query({
             description: kb.description,
             chromaCollectionId: kb.chromaCollectionId,
             documentCount: kb.documentCount,
+            isDefault: kb.isDefault,
         }));
     },
 });
@@ -133,6 +134,7 @@ export const create = mutation({
         name: v.string(),
         description: v.optional(v.string()),
         isPublic: v.boolean(),
+        isDefault: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -147,6 +149,18 @@ export const create = mutation({
             throw new Error("Only admins can create knowledge bases");
         }
 
+        // Enforce single default logic
+        if (args.isDefault) {
+            const existingDefaults = await ctx.db
+                .query("knowledgeBases")
+                .filter(q => q.eq(q.field("isDefault"), true))
+                .collect();
+
+            for (const kb of existingDefaults) {
+                await ctx.db.patch(kb._id, { isDefault: false });
+            }
+        }
+
         const chromaCollectionId = generateId("kb");
         const now = Date.now();
 
@@ -159,6 +173,7 @@ export const create = mutation({
             updatedAt: now,
             documentCount: 0,
             isPublic: args.isPublic,
+            isDefault: args.isDefault,
             status: "active",
         });
 
@@ -175,6 +190,7 @@ export const update = mutation({
         name: v.optional(v.string()),
         description: v.optional(v.string()),
         isPublic: v.optional(v.boolean()),
+        isDefault: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -192,10 +208,25 @@ export const update = mutation({
         const kb = await ctx.db.get(args.id);
         if (!kb) throw new Error("Knowledge base not found");
 
+        // Enforce single default logic
+        if (args.isDefault) {
+            const existingDefaults = await ctx.db
+                .query("knowledgeBases")
+                .filter(q => q.eq(q.field("isDefault"), true))
+                .collect();
+
+            for (const existing of existingDefaults) {
+                if (existing._id !== args.id) {
+                    await ctx.db.patch(existing._id, { isDefault: false });
+                }
+            }
+        }
+
         await ctx.db.patch(args.id, {
             ...(args.name !== undefined && { name: args.name }),
             ...(args.description !== undefined && { description: args.description }),
             ...(args.isPublic !== undefined && { isPublic: args.isPublic }),
+            ...(args.isDefault !== undefined && { isDefault: args.isDefault }),
             updatedAt: Date.now(),
         });
 

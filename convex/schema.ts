@@ -157,6 +157,7 @@ export default defineSchema({
     updatedAt: v.number(),
     documentCount: v.number(),           // Cached count
     isPublic: v.boolean(),               // If false, only admins see it
+    isDefault: v.optional(v.boolean()),  // [NEW] Controls default selection
     status: v.union(
       v.literal("active"),
       v.literal("archived"),

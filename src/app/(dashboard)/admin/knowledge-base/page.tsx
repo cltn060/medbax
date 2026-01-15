@@ -234,6 +234,7 @@ function CreateKBModal({
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [isPublic, setIsPublic] = useState(true);
+    const [isDefault, setIsDefault] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
 
     const createKB = useMutation(api.knowledgeBases.create);
@@ -249,6 +250,7 @@ function CreateKBModal({
                 name: name.trim(),
                 description: description.trim() || undefined,
                 isPublic,
+                isDefault,
             });
 
             // 2. Create collection in FastAPI/LanceDB
@@ -258,6 +260,7 @@ function CreateKBModal({
             setName("");
             setDescription("");
             setIsPublic(true);
+            setIsDefault(false);
             onClose();
         } catch (error) {
             console.error("Error creating KB:", error);
@@ -312,7 +315,26 @@ function CreateKBModal({
                         />
                     </button>
                     <span className="text-sm text-slate-700 dark:text-zinc-300">
-                        Public (visible to patients in chat)
+                        Public (visible to patients)
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setIsDefault(!isDefault)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isDefault
+                            ? "bg-indigo-600"
+                            : "bg-slate-200 dark:bg-zinc-700"
+                            }`}
+                    >
+                        <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDefault ? "translate-x-6" : "translate-x-1"
+                                }`}
+                        />
+                    </button>
+                    <span className="text-sm text-slate-700 dark:text-zinc-300">
+                        <b>Set as Default</b> (auto-selected for new chats)
                     </span>
                 </div>
 

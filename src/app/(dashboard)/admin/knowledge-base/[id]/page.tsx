@@ -16,7 +16,10 @@ import {
     Database,
     CheckCircle,
     XCircle,
+
     Clock,
+    Pencil,
+    Save,
 } from "lucide-react";
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
@@ -29,6 +32,7 @@ export default function KnowledgeBaseDetailPage() {
     const kbId = params.id as string;
 
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDocModalOpen, setIsDeleteDocModalOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<{
         _id: string;
@@ -124,13 +128,22 @@ export default function KnowledgeBaseDetailPage() {
                         </p>
                     </div>
                 </div>
-                <button
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                    <Upload className="h-4 w-4" />
-                    Upload Document
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                    </button>
+                    <button
+                        onClick={() => setIsUploadModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <Upload className="h-4 w-4" />
+                        Upload Document
+                    </button>
+                </div>
             </div>
 
             {/* Stats */}
@@ -238,6 +251,13 @@ export default function KnowledgeBaseDetailPage() {
                 onClose={() => setIsUploadModalOpen(false)}
                 knowledgeBaseId={kbId as Id<"knowledgeBases">}
                 chromaCollectionId={knowledgeBase.chromaCollectionId}
+            />
+
+            {/* Edit Modal */}
+            <EditKBModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                kb={knowledgeBase}
             />
 
             {/* Delete Document Confirmation Modal */}
@@ -537,6 +557,156 @@ function UploadModal({
                     </button>
                 </div>
             </div>
+        </Modal>
+    );
+}
+
+// ============================================================================
+// Edit KB Modal Component
+// ============================================================================
+
+function EditKBModal({
+    isOpen,
+    onClose,
+    kb,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    kb: {
+        _id: Id<"knowledgeBases">;
+        name: string;
+        description?: string;
+        isPublic: boolean;
+        isDefault?: boolean;
+    };
+}) {
+    const [name, setName] = useState(kb.name);
+    const [description, setDescription] = useState(kb.description || "");
+    const [isPublic, setIsPublic] = useState(kb.isPublic);
+    const [isDefault, setIsDefault] = useState(kb.isDefault || false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const updateKB = useMutation(api.knowledgeBases.update);
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+
+        setIsSaving(true);
+        try {
+            await updateKB({
+                id: kb._id,
+                name: name.trim(),
+                description: description.trim() || undefined,
+                isPublic,
+                isDefault,
+            });
+
+            onClose();
+        } catch (error) {
+            console.error("Error updating KB:", error);
+            alert("Failed to update knowledge base. Please try again.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Edit Knowledge Base">
+            <form onSubmit={handleUpdate} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                        Name *
+                    </label>
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="e.g., Cardiology, Oncology"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1">
+                        Description
+                    </label>
+                    <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Brief description of this knowledge base..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    />
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setIsPublic(!isPublic)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublic
+                            ? "bg-indigo-600"
+                            : "bg-slate-200 dark:bg-zinc-700"
+                            }`}
+                    >
+                        <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublic ? "translate-x-6" : "translate-x-1"
+                                }`}
+                        />
+                    </button>
+                    <span className="text-sm text-slate-700 dark:text-zinc-300">
+                        Public (visible to patients)
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setIsDefault(!isDefault)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isDefault
+                            ? "bg-indigo-600"
+                            : "bg-slate-200 dark:bg-zinc-700"
+                            }`}
+                    >
+                        <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isDefault ? "translate-x-6" : "translate-x-1"
+                                }`}
+                        />
+                    </button>
+                    <span className="text-sm text-slate-700 dark:text-zinc-300">
+                        <b>Set as Default</b> (auto-selected for new chats)
+                    </span>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={isSaving || !name.trim()}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="h-4 w-4" />
+                                Save Changes
+                            </>
+                        )}
+                    </button>
+                </div>
+            </form>
         </Modal>
     );
 }

@@ -38,11 +38,13 @@ export function Header() {
                         }
                     }}
                 >
-                    <UserButton.Action
-                        label="Manage Subscription"
-                        labelIcon={<CreditCard className="h-4 w-4" />}
-                        onClick={handleManageSubscription}
-                    />
+                    <UserButton.MenuItems>
+                        <UserButton.Action
+                            label="Manage Subscription"
+                            labelIcon={<CreditCard className="h-4 w-4" />}
+                            onClick={handleManageSubscription}
+                        />
+                    </UserButton.MenuItems>
                 </UserButton>
             </div>
         </header>
