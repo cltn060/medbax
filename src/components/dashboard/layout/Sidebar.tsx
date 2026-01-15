@@ -4,11 +4,12 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
-import { User, MessageSquare, Settings, ChevronLeft, ChevronRight, ChevronDown, Plus, Search, X, Trash2 } from "lucide-react";
+import { MessageSquare, ChevronLeft, ChevronRight, ChevronDown, Plus, Search, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "../../../../convex/_generated/api";
 import { MedBaxLogo } from "../../Logo";
 import { DeleteConfirmDialog } from "../../ui/DeleteConfirmDialog";
+import { UserMenuDropdown } from "./UserMenuDropdown";
 import { Id } from "../../../../convex/_generated/dataModel";
 
 export function Sidebar() {
@@ -59,8 +60,6 @@ export function Sidebar() {
             : filteredChats.slice(0, 10);
 
     const isChatActive = pathname.startsWith("/dashboard/chat") || pathname === "/dashboard";
-    const isProfile = pathname.startsWith("/dashboard/profile");
-    const isSettings = pathname.startsWith("/dashboard/settings");
 
     // Check if current chat is active
     const getCurrentChatId = () => {
@@ -253,60 +252,8 @@ export function Sidebar() {
                 )}
 
 
-                {/* Bottom Navigation Items */}
-                <div className="mt-auto">
-                    {/* Patient Profile Link */}
-                    <Link
-                        href="/dashboard/profile"
-                        className={cn(
-                            "group flex items-center py-2.5 text-sm font-medium border-t border-slate-300 dark:border-zinc-700 border-b border-b-slate-200 dark:border-b-zinc-800 transition-all duration-200",
-                            isCollapsed ? "justify-center px-0" : "justify-center md:justify-start px-0 md:px-6",
-                            isProfile
-                                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-                                : "bg-white dark:bg-zinc-900/50 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white"
-                        )}
-                        title={isCollapsed ? "Patient Profile" : undefined}
-                    >
-                        <div className={cn(
-                            "shrink-0 p-1 rounded-md transition-colors",
-                            !isCollapsed && "md:mr-3",
-                            isProfile
-                                ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
-                                : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-500 group-hover:bg-slate-200 dark:group-hover:bg-zinc-700"
-                        )}>
-                            <User className="h-4 w-4" aria-hidden="true" />
-                        </div>
-                        {!isCollapsed && (
-                            <span className="hidden md:block truncate">Patient Profile</span>
-                        )}
-                    </Link>
-
-                    {/* Settings Link */}
-                    <Link
-                        href="/dashboard/settings"
-                        className={cn(
-                            "group flex items-center py-2.5 text-sm font-medium border-b border-slate-200 dark:border-zinc-800 transition-all duration-200",
-                            isCollapsed ? "justify-center px-0" : "justify-center md:justify-start px-0 md:px-6",
-                            isSettings
-                                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-                                : "bg-white dark:bg-zinc-900/50 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white"
-                        )}
-                        title={isCollapsed ? "Settings" : undefined}
-                    >
-                        <div className={cn(
-                            "shrink-0 p-1 rounded-md transition-colors",
-                            !isCollapsed && "md:mr-3",
-                            isSettings
-                                ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
-                                : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-500 group-hover:bg-slate-200 dark:group-hover:bg-zinc-700"
-                        )}>
-                            <Settings className="h-4 w-4" aria-hidden="true" />
-                        </div>
-                        {!isCollapsed && (
-                            <span className="hidden md:block truncate">Settings</span>
-                        )}
-                    </Link>
-                </div>
+                {/* User Menu */}
+                <UserMenuDropdown isCollapsed={isCollapsed} />
             </nav>
 
             {/* Delete Confirmation Dialog */}

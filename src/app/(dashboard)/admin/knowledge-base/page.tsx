@@ -7,6 +7,7 @@ import { Plus, Database, MoreVertical, Trash2, Archive, Eye, EyeOff, Loader2 } f
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { ContentSkeleton } from "@/components/ui/skeleton";
+import { deleteCollection, createCollection, RAG_API_URL } from "@/lib/rag-api";
 
 export default function KnowledgeBasePage() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -30,15 +31,8 @@ export default function KnowledgeBasePage() {
             // 1. Mark as deleting in Convex
             const { chromaCollectionId } = await markDeleting({ id: selectedKB._id as any });
 
-            // 2. Delete from FastAPI/ChromaDB
-            const response = await fetch(
-                `http://localhost:8000/collections/${chromaCollectionId}`,
-                { method: "DELETE" }
-            );
-
-            if (!response.ok) {
-                throw new Error("Failed to delete from ChromaDB");
-            }
+            // 2. Delete from FastAPI/LanceDB
+            await deleteCollection(chromaCollectionId);
 
             // 3. Complete deletion in Convex
             await completeDelete({ id: selectedKB._id as any });
@@ -257,12 +251,8 @@ function CreateKBModal({
                 isPublic,
             });
 
-            // 2. Create collection in FastAPI/ChromaDB
-            await fetch(`http://localhost:8000/collections/${chromaCollectionId}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: name.trim() }),
-            });
+            // 2. Create collection in FastAPI/LanceDB
+            await createCollection(chromaCollectionId, name.trim());
 
             // Reset form and close
             setName("");
@@ -312,8 +302,8 @@ function CreateKBModal({
                         type="button"
                         onClick={() => setIsPublic(!isPublic)}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublic
-                                ? "bg-indigo-600"
-                                : "bg-slate-200 dark:bg-zinc-700"
+                            ? "bg-indigo-600"
+                            : "bg-slate-200 dark:bg-zinc-700"
                             }`}
                     >
                         <span

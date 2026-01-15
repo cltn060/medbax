@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { ContentSkeleton } from "@/components/ui/skeleton";
+import { deleteDocument, uploadDocument, TaskStatusResponse } from "@/lib/rag-api";
 
 export default function KnowledgeBaseDetailPage() {
     const params = useParams();
@@ -54,15 +55,8 @@ export default function KnowledgeBaseDetailPage() {
             // 1. Mark as deleting
             await markDocumentDeleting({ documentId: selectedDoc._id as Id<"knowledgeBaseDocuments"> });
 
-            // 2. Delete from FastAPI/ChromaDB
-            const response = await fetch(
-                `http://localhost:8000/embeddings/${knowledgeBase.chromaCollectionId}/${selectedDoc.chromaDocumentId}`,
-                { method: "DELETE" }
-            );
-
-            if (!response.ok) {
-                throw new Error("Failed to delete from ChromaDB");
-            }
+            // 2. Delete from FastAPI/LanceDB
+            await deleteDocument(knowledgeBase.chromaCollectionId, selectedDoc.chromaDocumentId);
 
             // 3. Complete deletion
             await completeDocumentDelete({ documentId: selectedDoc._id as Id<"knowledgeBaseDocuments"> });
@@ -404,25 +398,24 @@ function UploadModal({
             setUploadProgress("Preparing RAG processing...");
             const { chromaDocumentId } = await generateDocumentId();
 
-            // 3. Upload to FastAPI
-            setUploadProgress("Processing PDF vectorization...");
-            const formData = new FormData();
-            formData.append("file", file);
+            // 3. Upload to FastAPI (V2 async with progress)
+            setUploadProgress("Submitting for processing...");
 
-            const response = await fetch(
-                `http://localhost:8000/upload/${chromaCollectionId}?document_id=${chromaDocumentId}`,
-                {
-                    method: "POST",
-                    body: formData,
+            const result = await uploadDocument(
+                chromaCollectionId,
+                file,
+                chromaDocumentId,
+                (status: TaskStatusResponse) => {
+                    // Update progress based on task status
+                    if (status.state === "PENDING") {
+                        setUploadProgress("Queued for processing...");
+                    } else if (status.state === "PROCESSING") {
+                        const step = status.progress?.step || "processing";
+                        const message = status.progress?.message || "Processing document...";
+                        setUploadProgress(message);
+                    }
                 }
             );
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || "RAG processing failed");
-            }
-
-            const result = await response.json();
 
             // 4. Record in Convex
             setUploadProgress("Finalizing...");

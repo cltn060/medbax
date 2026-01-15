@@ -9,6 +9,8 @@
 | Version | Date | Summary |
 |---------|------|---------|
 | v1 | 2025-12-27 | Initial implementation - streaming chat, KB selector, PDF viewer |
+| v2 | 2025-12-27 | Unified ID system - Sources metadata, indexed lookup |
+| v3 | 2026-01-14 | Subscription limits, health panel, KB persistence |
 
 ---
 
@@ -264,6 +266,8 @@ const resolvedUrl = isPatientDoc ? patientDoc?.fileUrl : kbDocUrl;
 
 ## Related Documentation
 
+- **v2 (Sources/Metadata):** [`chat_implementation_v2.md`](file:///c:/personalData/devProjects/medbax/implementation/chat/chat_implementation_v2.md)
+- **v3 (Latest):** [`chat_implementation_v3.md`](file:///c:/personalData/devProjects/medbax/implementation/chat/chat_implementation_v3.md)
 - **Architecture:** [THREE_TIER_ARCHITECTURE.md](file:///c:/personalData/devProjects/medbax/docs/THREE_TIER_ARCHITECTURE.md)
 - **Knowledge Bases:** [knowledge_bases_implementation_v1.md](file:///c:/personalData/devProjects/medbax/implementation/knowledge-bases/knowledge_bases_implementation_v1.md)
 - **Schema:** [convex/schema.ts](file:///c:/personalData/devProjects/medbax/convex/schema.ts)

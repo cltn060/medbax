@@ -7,6 +7,7 @@ Feature-based implementation documentation for MedBax.
 ```
 implementation/
 ├── chat/             # AI chat feature implementation
+├── fastapi-backend/  # FastAPI RAG backend (Python)
 ├── knowledge-bases/  # Knowledge bases (RAG collections) feature
 ├── marketing/        # Marketing pages implementation
 ├── subscriptions/    # Stripe subscription implementation

@@ -549,9 +549,6 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                         {/* Empty state for new chats */}
                         {chatId && messages && messages.length === 0 && !streamingResponse && (
                             <div className="flex flex-col items-center justify-center h-full text-center">
-                                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-full mb-4">
-                                    <Sparkles className="h-8 w-8 text-indigo-500" />
-                                </div>
                                 <h3 className="text-lg font-medium text-slate-800 dark:text-zinc-200 mb-1">Start a conversation</h3>
                                 <p className="text-sm text-slate-500 dark:text-zinc-500 max-w-xs">
                                     Ask me anything about your patient's health or medical questions.

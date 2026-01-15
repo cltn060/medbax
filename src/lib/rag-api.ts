@@ -20,12 +20,45 @@ export interface DocumentInfo {
     chunk_count: number;
 }
 
+// V1 sync upload response (kept for backwards compatibility)
 export interface UploadResponse {
     message: string;
     document_id: string;
     filename: string;
     chunks_created: number;
     page_count: number;
+}
+
+// V2 async upload response - returned immediately when upload starts
+export interface UploadTaskResponse {
+    message: string;
+    task_id: string;
+    filename: string;
+    collection_id: string;
+}
+
+// V2 task status response - returned when polling task status
+export interface TaskStatusResponse {
+    task_id: string;
+    state: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILURE";
+    result?: {
+        status: string;
+        document_id?: string;
+        filename?: string;
+        collection_name?: string;
+        chunks_created?: number;
+        page_count?: number;
+        error?: string;
+        message?: string;
+    };
+    progress?: {
+        step?: string;
+        filename?: string;
+        message?: string;
+        blocks_extracted?: number;
+        chunks_created?: number;
+        page_count?: number;
+    };
 }
 
 export interface DeleteResponse {
@@ -37,8 +70,11 @@ export interface DeleteResponse {
 // Collection Operations
 // ============================================================================
 
+// Export RAG_API_URL for use in other files
+export { RAG_API_URL };
+
 /**
- * Create a new collection in ChromaDB
+ * Create a new collection in LanceDB (V2) / ChromaDB (V1)
  */
 export async function createCollection(collectionId: string, name: string): Promise<void> {
     const response = await fetch(`${RAG_API_URL}/collections/${collectionId}`, {
@@ -54,7 +90,7 @@ export async function createCollection(collectionId: string, name: string): Prom
 }
 
 /**
- * Delete a collection from ChromaDB
+ * Delete a collection from LanceDB (V2) / ChromaDB (V1)
  */
 export async function deleteCollection(collectionId: string): Promise<DeleteResponse> {
     const response = await fetch(`${RAG_API_URL}/collections/${collectionId}`, {
@@ -88,12 +124,68 @@ export async function getCollectionStats(collectionId: string): Promise<Collecti
 // ============================================================================
 
 /**
- * Upload a PDF document to a collection
+ * Get the status of an async upload task (V2)
+ */
+export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
+    const response = await fetch(`${RAG_API_URL}/tasks/${taskId}`);
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to get task status");
+    }
+
+    return response.json();
+}
+
+/**
+ * Poll task status until completion or failure
+ * @param taskId - The task ID to poll
+ * @param onProgress - Optional callback for progress updates
+ * @param pollInterval - Polling interval in ms (default: 2000)
+ * @param maxAttempts - Maximum polling attempts (default: 300 = 10 minutes)
+ */
+export async function pollTaskCompletion(
+    taskId: string,
+    onProgress?: (status: TaskStatusResponse) => void,
+    pollInterval: number = 2000,
+    maxAttempts: number = 300
+): Promise<TaskStatusResponse> {
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+        const status = await getTaskStatus(taskId);
+        onProgress?.(status);
+
+        if (status.state === "SUCCESS") {
+            return status;
+        }
+
+        if (status.state === "FAILURE") {
+            const errorMessage = status.result?.error || "Task failed";
+            throw new Error(errorMessage);
+        }
+
+        // Wait before next poll
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        attempts++;
+    }
+
+    throw new Error("Task polling timed out");
+}
+
+/**
+ * Upload a PDF document to a collection (V2 async workflow)
+ * 
+ * V2 uploads are non-blocking:
+ * 1. Submit upload request -> returns task_id immediately
+ * 2. Poll task status until SUCCESS/FAILURE
+ * 3. Return final result with document_id and chunks_created
  */
 export async function uploadDocument(
     collectionId: string,
     file: File,
-    documentId?: string
+    documentId?: string,
+    onProgress?: (status: TaskStatusResponse) => void
 ): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append("file", file);
@@ -102,6 +194,7 @@ export async function uploadDocument(
         ? `${RAG_API_URL}/upload/${collectionId}?document_id=${documentId}`
         : `${RAG_API_URL}/upload/${collectionId}`;
 
+    // Step 1: Submit upload (returns immediately with task_id)
     const response = await fetch(url, {
         method: "POST",
         body: formData,
@@ -112,7 +205,19 @@ export async function uploadDocument(
         throw new Error(error.detail || "Failed to upload document");
     }
 
-    return response.json();
+    const uploadTask: UploadTaskResponse = await response.json();
+
+    // Step 2: Poll for completion
+    const finalStatus = await pollTaskCompletion(uploadTask.task_id, onProgress);
+
+    // Step 3: Return V1-compatible response format
+    return {
+        message: finalStatus.result?.message || "Document processed successfully",
+        document_id: finalStatus.result?.document_id || documentId || "",
+        filename: finalStatus.result?.filename || file.name,
+        chunks_created: finalStatus.result?.chunks_created || 0,
+        page_count: finalStatus.result?.page_count || 0,
+    };
 }
 
 /**
