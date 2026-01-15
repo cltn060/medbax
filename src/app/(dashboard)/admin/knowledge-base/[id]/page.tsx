@@ -476,7 +476,16 @@ function UploadModal({
                 throw new Error(`Failed to upload to storage: ${storageResult.statusText}`);
             }
 
-            const { storageId } = await storageResult.json();
+            const responseText = await storageResult.text();
+            console.log("Convex Storage Response:", responseText);
+
+            let storageId;
+            try {
+                const data = JSON.parse(responseText);
+                storageId = data.storageId;
+            } catch (e) {
+                throw new Error(`Convex returned invalid JSON: ${responseText.substring(0, 100)}...`);
+            }
 
             // 2. Generate document ID for RAG
             const { chromaDocumentId } = await generateDocumentId();
