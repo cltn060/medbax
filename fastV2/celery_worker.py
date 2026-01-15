@@ -66,7 +66,8 @@ def ingest_pdf_task(
     temp_file_path: str,
     filename: str,
     collection_name: str,
-    document_id: str
+    document_id: str,
+    fast_mode: bool = False
 ) -> Dict[str, Any]:
     """
     Background task for PDF ingestion with advanced extraction.
@@ -77,6 +78,7 @@ def ingest_pdf_task(
         filename: Original filename
         collection_name: Target collection
         document_id: Unique document ID
+        fast_mode: If True, skip image extraction for faster processing
     
     Returns:
         Dict with processing results or error details
@@ -84,18 +86,19 @@ def ingest_pdf_task(
     
     try:
         # Update task state to PROCESSING
+        mode_label = "⚡ FAST" if fast_mode else "📄 FULL"
         self.update_state(
             state='PROCESSING',
             meta={
                 'step': 'extracting_content',
                 'filename': filename,
-                'message': 'Extracting text, images, and tables from PDF...'
+                'message': f'{mode_label} - Extracting text from PDF...' if fast_mode else 'Extracting text, images, and tables from PDF...'
             }
         )
         
         # Step 1: Extract content using unstructured.io
         try:
-            blocks = process_pdf(temp_file_path, filename)
+            blocks = process_pdf(temp_file_path, filename, fast_mode=fast_mode)
         except Exception as e:
             return {
                 'status': 'FAILURE',

@@ -16,7 +16,7 @@ import {
     Database,
     CheckCircle,
     XCircle,
-
+    Zap,
     Clock,
     Pencil,
     Save,
@@ -374,6 +374,7 @@ function UploadModal({
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState("");
+    const [fastMode, setFastMode] = useState(true); // Default to fast mode
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const generateDocumentId = useMutation(api.knowledgeBases.generateDocumentId);
@@ -434,7 +435,8 @@ function UploadModal({
                         const message = status.progress?.message || "Processing document...";
                         setUploadProgress(message);
                     }
-                }
+                },
+                fastMode // Pass fast mode parameter
             );
 
             // 4. Record in Convex
@@ -524,6 +526,31 @@ function UploadModal({
                         {uploadProgress}
                     </div>
                 )}
+
+                {/* Fast Mode Toggle */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-2">
+                        <Zap className={`h-4 w-4 ${fastMode ? "text-amber-500" : "text-slate-400 dark:text-zinc-500"}`} />
+                        <div>
+                            <div className="text-sm font-medium text-slate-700 dark:text-zinc-300">Fast Mode</div>
+                            <div className="text-xs text-slate-500 dark:text-zinc-500">
+                                {fastMode ? "Text-only extraction (faster)" : "Full extraction with images (slower)"}
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFastMode(!fastMode)}
+                        disabled={isUploading}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${fastMode ? "bg-amber-500" : "bg-slate-200 dark:bg-zinc-700"
+                            }`}
+                    >
+                        <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${fastMode ? "translate-x-6" : "translate-x-1"
+                                }`}
+                        />
+                    </button>
+                </div>
 
                 {/* Actions */}
                 <div className="flex justify-end gap-3 pt-2">

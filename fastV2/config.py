@@ -2,8 +2,10 @@
 Configuration for multi-collection RAG backend - Production Grade.
 """
 
+from pathlib import Path
+
 # LanceDB Settings (Disk-based storage for scalability)
-LANCEDB_PATH = "./lancedb_storage"
+LANCEDB_PATH = str(Path(__file__).parent / "lancedb_storage")
 TABLE_NAME = "medical_knowledge_base"  # Single unified table
 
 # Model Settings

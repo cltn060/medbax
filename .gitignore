@@ -58,6 +58,14 @@ ENV/
 # Vector database storage
 fast/chroma_storage/
 fastV2/chroma_storage/
+fastV2/test_chroma_storage/
+fastV2/lancedb_storage_BROKEN/
+fastV2/test_lancedb_storage/
+fastV2/temp_uploads/
+fastV2/test_lancedb_storage/
+
+
+
 fast/lancedb_storage/
 fastV2/lancedb_storage/
 

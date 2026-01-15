@@ -6,12 +6,14 @@ Production-grade for 1000+ books with disk-based storage.
 import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Annotated
+
 import numpy as np
 import lancedb
 from lancedb.pydantic import LanceModel, Vector
 from lancedb.embeddings import get_registry
 from lancedb.rerankers import LinearCombinationReranker
 import pyarrow as pa
+import traceback
 
 from embeddings import embed_text, embed_texts
 from config import (
@@ -46,7 +48,7 @@ class MedicalDocument(LanceModel):
     Single table supports multiple collections via collection_name filter.
     """
     text: str  # The actual text content
-    vector: Annotated[List[float], EMBEDDING_DIMENSION]  # Embedding vector
+    vector: Vector(EMBEDDING_DIMENSION)  # Embedding vector
     collection_name: str  # Filter by knowledge base (e.g., "cardiology", "neurology")
     filename: str  # Source document filename
     page_number: int  # Page number in original PDF
@@ -109,8 +111,11 @@ def collection_exists(collection_name: str) -> bool:
             .where(f"collection_name = '{collection_name}'") \
             .limit(1) \
             .to_list()
-        return len(results) > 0
-    except Exception:
+        exists = len(results) > 0
+        print(f"   📋 collection_exists('{collection_name}'): {len(results)} docs found, exists={exists}")
+        return exists
+    except Exception as e:
+        print(f"   ❌ collection_exists('{collection_name}') error: {e}")
         return False
 
 
@@ -263,6 +268,15 @@ def add_documents(
     table.add(records)
     
     print(f"✓ Added {len(records)} chunks to collection '{collection_name}'")
+    print(f"   📁 LanceDB path: {LANCEDB_PATH}")
+    print(f"   📊 Table name: {TABLE_NAME}")
+    
+    # Verify documents were added
+    verify_results = table.search() \
+        .where(f"collection_name = '{collection_name}'") \
+        .limit(5) \
+        .to_list()
+    print(f"   ✓ Verification: {len(verify_results)} chunks now in collection")
     
     # recreate_fts_index()
     
@@ -369,9 +383,10 @@ def retrieve_context(
         if not collection_exists(collection_name):
             return "", []
         
-        # Generate query embedding and convert to numpy array for LanceDB
-        query_vector = np.array(embed_text(query), dtype=np.float32)
-        print(f"   🔍 Generated query embedding (dim: {len(query_vector)}, dtype: {query_vector.dtype})")
+        # Generate query embedding for LanceDB
+        # With Vector() schema, standard list is accepted
+        query_vector = embed_text(query)
+        print(f"   🔍 Generated query embedding (dim: {len(query_vector)})")
         
         # ============================================================
         # HYBRID SEARCH: Vector + Full-Text Search with RRF Fusion
@@ -466,6 +481,7 @@ def retrieve_context(
     
     except Exception as e:
         print(f"Error retrieving context: {e}")
+        traceback.print_exc()
         return "", []
 
 

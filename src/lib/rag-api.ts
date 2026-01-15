@@ -180,19 +180,26 @@ export async function pollTaskCompletion(
  * 1. Submit upload request -> returns task_id immediately
  * 2. Poll task status until SUCCESS/FAILURE
  * 3. Return final result with document_id and chunks_created
+ * 
+ * @param fastMode - If true, skip image extraction for faster processing
  */
 export async function uploadDocument(
     collectionId: string,
     file: File,
     documentId?: string,
-    onProgress?: (status: TaskStatusResponse) => void
+    onProgress?: (status: TaskStatusResponse) => void,
+    fastMode: boolean = false
 ): Promise<UploadResponse> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const url = documentId
-        ? `${RAG_API_URL}/upload/${collectionId}?document_id=${documentId}`
-        : `${RAG_API_URL}/upload/${collectionId}`;
+    // Build URL with query params
+    const params = new URLSearchParams();
+    if (documentId) params.append("document_id", documentId);
+    if (fastMode) params.append("fast", "true");
+
+    const queryString = params.toString();
+    const url = `${RAG_API_URL}/upload/${collectionId}${queryString ? `?${queryString}` : ""}`;
 
     // Step 1: Submit upload (returns immediately with task_id)
     const response = await fetch(url, {

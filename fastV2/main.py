@@ -167,6 +167,16 @@ async def root():
         "total_collections": len(collections)
     }
 
+
+@app.get("/debug/collections")
+async def debug_collections():
+    """Debug: List all collections with their document counts."""
+    from retriever import get_table_info
+    return {
+        "table_info": get_table_info(),
+        "collections": list_collections()
+    }
+
 # ============================================================================
 # Collection Endpoints
 # ============================================================================
@@ -233,7 +243,12 @@ async def delete_collection_endpoint(collection_id: str):
 # ============================================================================
 
 @app.post("/upload/{collection_id}", response_model=UploadResponse)
-async def upload_pdf(collection_id: str, file: UploadFile = File(...), document_id: Optional[str] = None):
+async def upload_pdf(
+    collection_id: str, 
+    file: UploadFile = File(...), 
+    document_id: Optional[str] = None,
+    fast: bool = False
+):
     """
     NON-BLOCKING: Upload a PDF file and trigger background processing.
     
@@ -244,6 +259,7 @@ async def upload_pdf(collection_id: str, file: UploadFile = File(...), document_
         collection_id: The collection to upload to
         file: The PDF file
         document_id: Optional pre-generated document ID
+        fast: If True, use fast mode (skips image extraction for speed)
     """
     validate_pdf(file)
     
@@ -253,6 +269,13 @@ async def upload_pdf(collection_id: str, file: UploadFile = File(...), document_
     # Save file to temp directory
     temp_filename = f"{doc_id}_{file.filename}"
     temp_path = Path(UPLOAD_TEMP_DIR) / temp_filename
+    
+    mode_label = "⚡ FAST" if fast else "📄 FULL"
+    print(f"\n{'='*60}")
+    print(f"📤 [UPLOAD] {mode_label} mode upload")
+    print(f"   Collection: {collection_id}")
+    print(f"   File: {file.filename}")
+    print(f"   Document ID: {doc_id}")
     
     try:
         # Read and validate PDF
@@ -268,13 +291,16 @@ async def upload_pdf(collection_id: str, file: UploadFile = File(...), document_
         with open(temp_path, "wb") as buffer:
             buffer.write(content)
         
-        # Trigger Celery task (non-blocking)
+        # Trigger Celery task (non-blocking) with fast_mode parameter
         task = ingest_pdf_task.apply_async(
-            args=[str(temp_path), file.filename, collection_id, doc_id]
+            args=[str(temp_path), file.filename, collection_id, doc_id, fast]
         )
         
+        print(f"   Task ID: {task.id}")
+        print(f"{'='*60}\n")
+        
         return UploadResponse(
-            message=f"PDF upload accepted. Processing in background...",
+            message=f"PDF upload accepted ({mode_label}). Processing in background...",
             task_id=task.id,
             filename=file.filename,
             collection_id=collection_id
@@ -468,9 +494,22 @@ async def chat_stream(request: ChatRequest):
             
             # After streaming, append source metadata as JSON
             if sources:
+                # Transform sources to match frontend schema
+                # Backend returns: {filename, page_number, title, data_type}
+                # Frontend expects: {title, snippet, sourceType, chromaDocumentId, pageNumber}
+                transformed_sources = []
+                for src in sources:
+                    transformed_sources.append({
+                        "title": src.get("filename", src.get("title", "Unknown")),
+                        "snippet": src.get("title", ""),  # Use section title as snippet
+                        "sourceType": "kb_document",
+                        "chromaDocumentId": src.get("chunk_id", ""),
+                        "pageNumber": src.get("page_number") if src.get("page_number") != "N/A" else None
+                    })
+                
                 yield SOURCE_METADATA_DELIMITER
-                yield json.dumps(sources)
-                print(f"   ✓ Sent sources metadata")
+                yield json.dumps(transformed_sources)
+                print(f"   ✓ Sent sources metadata ({len(transformed_sources)} sources)")
             
             print(f"{'='*60}\n")
                 

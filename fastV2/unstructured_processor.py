@@ -230,6 +230,7 @@ async def normalize_element_async(element, filename: str) -> Optional[Normalized
 async def process_pdf_async(
     pdf_path: str,
     filename: str,
+    fast_mode: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Process a PDF file with async image/table summarization.
@@ -237,19 +238,31 @@ async def process_pdf_async(
     Args:
         pdf_path: Path to the PDF file
         filename: Original filename (for metadata)
+        fast_mode: If True, skip image extraction and use fast text-only strategy
     
     Returns:
         List of normalized blocks as dictionaries
     """
     # Step 1: Extract elements using unstructured.io
-    elements = partition_pdf(
-        filename=pdf_path,
-        strategy="hi_res",
-        infer_table_structure=True,
-        extract_image_block_types=["Image", "Table"],
-        extract_image_block_to_payload=True,
-        languages=["eng", "deu"],
-    )
+    if fast_mode:
+        # FAST MODE: Simple text extraction, no images, no hi-res OCR
+        print(f"   ⚡ Fast mode: Skipping image extraction, using 'fast' strategy")
+        elements = partition_pdf(
+            filename=pdf_path,
+            strategy="fast",  # Much faster, text-only
+            infer_table_structure=False,  # Skip table structure detection
+            languages=["eng", "deu"],
+        )
+    else:
+        # FULL MODE: High-resolution with image extraction
+        elements = partition_pdf(
+            filename=pdf_path,
+            strategy="hi_res",
+            infer_table_structure=True,
+            extract_image_block_types=["Image", "Table"],
+            extract_image_block_to_payload=True,
+            languages=["eng", "deu"],
+        )
     
     # Step 2: Normalize elements asynchronously (parallel processing)
     tasks = [normalize_element_async(el, filename) for el in elements]
@@ -268,21 +281,24 @@ async def process_pdf_async(
         for block in normalized_blocks
     ]
     
+    print(f"   ✓ Extracted {len(blocks)} blocks (fast_mode={fast_mode})")
+    
     return blocks
 
 
-def process_pdf(pdf_path: str, filename: str) -> List[Dict[str, Any]]:
+def process_pdf(pdf_path: str, filename: str, fast_mode: bool = False) -> List[Dict[str, Any]]:
     """
     Synchronous wrapper for async PDF processing.
     
     Args:
         pdf_path: Path to the PDF file
         filename: Original filename (for metadata)
+        fast_mode: If True, skip image extraction for faster processing
     
     Returns:
         List of normalized blocks as dictionaries
     """
-    return asyncio.run(process_pdf_async(pdf_path, filename))
+    return asyncio.run(process_pdf_async(pdf_path, filename, fast_mode=fast_mode))
 
 
 # ============================================================================

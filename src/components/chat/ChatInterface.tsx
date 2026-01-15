@@ -277,19 +277,19 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
             sections.push(`Blood Type: ${patient.bloodType}`);
         }
         if (patient.conditions && patient.conditions.length > 0) {
-            sections.push(`Medical Conditions: ${patient.conditions.join(", ")}`);
+            sections.push(`Medical Conditions: ${patient.conditions.map((c: any) => c.condition).join(", ")}`);
         }
         if (patient.allergies && patient.allergies.length > 0) {
-            sections.push(`Allergies: ${patient.allergies.join(", ")}`);
+            sections.push(`Allergies: ${patient.allergies.map((a: any) => `${a.agent} (${a.reactionType})`).join(", ")}`);
         }
         if (patient.medications && patient.medications.length > 0) {
-            sections.push(`Current Medications: ${patient.medications.join(", ")}`);
+            sections.push(`Current Medications: ${patient.medications.map((m: any) => `${m.name} ${m.dosage}`).join(", ")}`);
         }
         if (patient.surgeries && patient.surgeries.length > 0) {
-            sections.push(`Surgical History: ${patient.surgeries.join(", ")}`);
+            sections.push(`Surgical History: ${patient.surgeries.map((s: any) => `${s.procedure} (${s.date || 'unknown date'})`).join(", ")}`);
         }
         if (patient.familyHistory && patient.familyHistory.length > 0) {
-            sections.push(`Family History: ${patient.familyHistory.join(", ")}`);
+            sections.push(`Family History: ${patient.familyHistory.map((f: any) => `${f.relation}: ${f.condition}`).join(", ")}`);
         }
         if (patient.lifestyle) {
             const lifestyleItems = [];

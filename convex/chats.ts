@@ -65,7 +65,7 @@ export const sendMessage = mutation({
             v.array(
                 v.object({
                     title: v.string(),
-                    snippet: v.string(),
+                    snippet: v.optional(v.string()), // Optional - not all sources have snippets
                     sourceType: v.union(
                         v.literal("kb_document"),
                         v.literal("patient_document"),

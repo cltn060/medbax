@@ -127,7 +127,7 @@ export default defineSchema({
       v.array(
         v.object({
           title: v.string(),
-          snippet: v.string(),
+          snippet: v.optional(v.string()), // Optional - not all sources have snippets
           // Discriminated source type
           sourceType: v.union(
             v.literal("kb_document"),
