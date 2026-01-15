@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "../../../../../../convex/_generated/api";
@@ -13,7 +13,6 @@ import {
     Loader2,
     Eye,
     EyeOff,
-    Database,
     CheckCircle,
     XCircle,
     Zap,
@@ -60,18 +59,47 @@ export default function KnowledgeBaseDetailPage() {
     const markDocumentDeleting = useMutation(api.knowledgeBases.markDocumentDeleting);
     const completeDocumentDelete = useMutation(api.knowledgeBases.completeDocumentDelete);
 
+    // --- Strict State Handlers ---
+
+    const handleUploadStart = useCallback((id: string, filename: string) => {
+        setPendingUploads(prev => [...prev, {
+            id,
+            filename,
+            progress: "Initiating...",
+            status: "uploading"
+        }]);
+    }, []);
+
+    const handleUploadProgress = useCallback((id: string, progress: string) => {
+        setPendingUploads(prev => prev.map(u =>
+            u.id === id ? { ...u, progress, status: "processing" } : u
+        ));
+    }, []);
+
+    const handleUploadComplete = useCallback((id: string) => {
+        // Immediately remove from pending when done
+        setPendingUploads(prev => prev.filter(u => u.id !== id));
+    }, []);
+
+    const handleUploadError = useCallback((id: string, error: string) => {
+        setPendingUploads(prev => prev.map(u =>
+            u.id === id ? { ...u, progress: `Error: ${error}`, status: "error" } : u
+        ));
+        // Optional: Remove error message after 5 seconds so it doesn't stick forever
+        setTimeout(() => {
+            setPendingUploads(prev => prev.filter(u => u.id !== id));
+        }, 5000);
+    }, []);
+
+    // -----------------------------
+
     const handleDeleteDocument = async () => {
         if (!selectedDoc || !knowledgeBase) return;
 
         setIsDeletingDoc(true);
         try {
-            // 1. Mark as deleting
             await markDocumentDeleting({ documentId: selectedDoc._id as Id<"knowledgeBaseDocuments"> });
-
-            // 2. Delete from FastAPI/LanceDB
             await deleteDocument(knowledgeBase.chromaCollectionId, selectedDoc.chromaDocumentId);
-
-            // 3. Complete deletion
             await completeDocumentDelete({ documentId: selectedDoc._id as Id<"knowledgeBaseDocuments"> });
 
             setIsDeleteDocModalOpen(false);
@@ -185,7 +213,7 @@ export default function KnowledgeBaseDetailPage() {
                     </h3>
                 </div>
 
-                {documents.length === 0 ? (
+                {documents.length === 0 && pendingUploads.length === 0 ? (
                     <div className="p-8 text-center">
                         <FileText className="h-12 w-12 mx-auto text-slate-400 dark:text-zinc-600" />
                         <h4 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
@@ -204,27 +232,27 @@ export default function KnowledgeBaseDetailPage() {
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-                        {/* Pending Uploads - Filter out ones that are already in the existing documents list to avoid duplicates */}
-                        {pendingUploads.filter(upload => !documents.some(doc => doc.filename === upload.filename)).map((upload) => (
+                        {/* Pending Uploads */}
+                        {pendingUploads.map((upload) => (
                             <div
                                 key={upload.id}
                                 className="px-5 py-4 flex items-center justify-between bg-indigo-50/50 dark:bg-indigo-950/20"
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        {upload.status === "error" ? <XCircle className="h-5 w-5" /> : <Loader2 className="h-5 w-5 animate-spin" />}
                                     </div>
                                     <div>
                                         <div className="font-medium text-slate-900 dark:text-white">
                                             {upload.filename}
                                         </div>
-                                        <div className="text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                                        <div className={`text-xs flex items-center gap-1 ${upload.status === "error" ? "text-red-500" : "text-indigo-600 dark:text-indigo-400"}`}>
                                             <span>{upload.progress}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-medium">
-                                    Processing
+                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${upload.status === "error" ? "bg-red-100 text-red-700" : "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"}`}>
+                                    {upload.status === "error" ? "Error" : "Processing"}
                                 </span>
                             </div>
                         ))}
@@ -285,21 +313,10 @@ export default function KnowledgeBaseDetailPage() {
                 onClose={() => setIsUploadModalOpen(false)}
                 knowledgeBaseId={kbId as Id<"knowledgeBases">}
                 chromaCollectionId={knowledgeBase.chromaCollectionId}
-                onStartUpload={({ id, filename }) => {
-                    // Add to pending uploads
-                    setPendingUploads(prev => [...prev, {
-                        id,
-                        filename,
-                        progress: "Starting upload...",
-                        status: "uploading"
-                    }]);
-
-                    // Set up removal after a delay (Convex will show the actual doc when ready)
-                    // The pending upload will be automatically hidden when Convex shows the real document
-                    setTimeout(() => {
-                        setPendingUploads(prev => prev.filter(u => u.id !== id));
-                    }, 60000); // Remove after 60s as fallback
-                }}
+                onUploadStart={handleUploadStart}
+                onUploadProgress={handleUploadProgress}
+                onUploadComplete={handleUploadComplete}
+                onUploadError={handleUploadError}
             />
 
             {/* Edit Modal */}
@@ -414,16 +431,22 @@ function UploadModal({
     onClose,
     knowledgeBaseId,
     chromaCollectionId,
-    onStartUpload,
+    onUploadStart,
+    onUploadProgress,
+    onUploadComplete,
+    onUploadError,
 }: {
     isOpen: boolean;
     onClose: () => void;
     knowledgeBaseId: Id<"knowledgeBases">;
     chromaCollectionId: string;
-    onStartUpload: (upload: { id: string; filename: string; onProgress: (progress: string) => void; onComplete: () => void; onError: (error: string) => void }) => void;
+    onUploadStart: (id: string, filename: string) => void;
+    onUploadProgress: (id: string, progress: string) => void;
+    onUploadComplete: (id: string) => void;
+    onUploadError: (id: string, error: string) => void;
 }) {
     const [file, setFile] = useState<File | null>(null);
-    const [fastMode, setFastMode] = useState(true); // Default to fast mode
+    const [fastMode, setFastMode] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const generateDocumentId = useMutation(api.knowledgeBases.generateDocumentId);
@@ -448,23 +471,18 @@ function UploadModal({
         const currentFile = file;
         const currentFastMode = fastMode;
 
-        // Close modal immediately and reset state
+        // 1. Notify Parent that upload started
+        onUploadStart(uploadId, filename);
+
+        // 2. Reset local state and close modal
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         onClose();
 
-        // Start the upload in background, passing callbacks
-        onStartUpload({
-            id: uploadId,
-            filename,
-            onProgress: () => { }, // Will be set by parent
-            onComplete: () => { }, // Will be set by parent
-            onError: () => { }, // Will be set by parent
-        });
-
-        // Run the actual upload in background
         try {
-            // 1. Upload to Convex Storage
+            // A. Upload to Convex Storage
+            onUploadProgress(uploadId, "Uploading to storage...");
+
             const postUrl = await generateUploadUrl();
             const storageResult = await fetch(postUrl, {
                 method: "POST",
@@ -477,31 +495,36 @@ function UploadModal({
             }
 
             const responseText = await storageResult.text();
-            console.log("Convex Storage Response:", responseText);
-
             let storageId;
             try {
                 const data = JSON.parse(responseText);
                 storageId = data.storageId;
             } catch (e) {
-                throw new Error(`Convex returned invalid JSON: ${responseText.substring(0, 100)}...`);
+                throw new Error(`Convex returned invalid JSON`);
             }
 
-            // 2. Generate document ID for RAG
+            // B. Generate document ID
             const { chromaDocumentId } = await generateDocumentId();
 
-            // 3. Upload to FastAPI
+            // C. Upload to FastAPI
+            onUploadProgress(uploadId, "Processing embeddings...");
+
             const result = await uploadDocument(
                 chromaCollectionId,
                 currentFile,
                 chromaDocumentId,
                 (status: TaskStatusResponse) => {
-                    // Progress updates are handled by parent via pendingUploads state
+                    // Update parent with specific status details if available
+                    if (status?.status) {
+                        onUploadProgress(uploadId, `Processing: ${status.status}`);
+                    }
                 },
                 currentFastMode
             );
 
-            // 4. Record in Convex
+            // D. Record in Convex
+            onUploadProgress(uploadId, "Finalizing...");
+
             await addDocument({
                 knowledgeBaseId,
                 filename,
@@ -512,9 +535,13 @@ function UploadModal({
                 chunkCount: result.chunks_created,
             });
 
+            // 3. Notify Parent that upload is COMPLETE
+            onUploadComplete(uploadId);
+
         } catch (error: any) {
             console.error("Error uploading:", error);
-            alert(`Failed to upload ${filename}: ${error.message}`);
+            // 4. Notify Parent of Error
+            onUploadError(uploadId, error.message || "Unknown error occurred");
         }
     };
 
