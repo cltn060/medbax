@@ -39,9 +39,7 @@ FORMATTING RULES:
 - Do NOT use header markdown (like # or ##).
 - Do NOT use italics or code blocks.
 - You MAY use numbered or bulleted lists for readability.
-- For citations, use this format at the end: 
-  **Sources:**
-  - [Source: filename.pdf, Pages: 1, 2, 5]
+- Do NOT add source citations at the end - these are automatically displayed by the interface.
 """
 
 

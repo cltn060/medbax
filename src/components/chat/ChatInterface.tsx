@@ -96,7 +96,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         : null;
 
     // Determine document type from explicit sourceType field
-    const sourceType = viewingSource?.sourceType;
+    const sourceType = viewingSource?.sourceType || "kb_document"; // Default to kb_document
 
     // Strategy A: Fetch Patient Document (by ID)
     const patientDoc = useQuery(api.documents.getDocument,
@@ -107,14 +107,14 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
     // Strategy B: Fetch KB Document by chromaDocumentId (preferred - uses index)
     const kbDocByChroma = useQuery(api.knowledgeBases.getKbDocumentByChromaId,
-        sourceType === "kb_document" && viewingSource?.chromaDocumentId
+        viewingSource?.chromaDocumentId
             ? { chromaDocumentId: viewingSource.chromaDocumentId }
             : "skip"
     );
 
-    // Strategy C: Fallback - Fetch KB Document by filename (legacy/text-parsed citations)
+    // Strategy C: Fallback - Fetch KB Document by filename (always try when viewing a document)
     const kbDocUrlFallback = useQuery(api.knowledgeBases.getDocumentUrlByFilename,
-        sourceType === "kb_document" && !viewingSource?.chromaDocumentId && viewingDocument
+        viewingDocument
             ? { filename: viewingDocument.filename }
             : "skip"
     );
@@ -122,8 +122,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
     // Resolve URL based on source type (chromaId lookup preferred over filename)
     const resolvedUrl =
         sourceType === "patient_document" ? patientDoc?.fileUrl :
-            sourceType === "kb_document" ? (kbDocByChroma?.url || kbDocUrlFallback) :
-                null;
+            (kbDocByChroma?.url || kbDocUrlFallback);
 
     // Query public knowledge bases for selector
     const publicKBs = useQuery(api.knowledgeBases.listPublic);
@@ -184,12 +183,13 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
     }, [isKBDropdownOpen]);
 
     // Initialize selectedKB from chat's persisted knowledgeBaseId
-    // Initialize selectedKB from chat's persisted knowledgeBaseId
+    // Only update if the chat has an explicitly set KB (null means "no KB", undefined means "not loaded yet")
     useEffect(() => {
-        if (currentChat?.knowledgeBaseId !== undefined) {
-            setSelectedKB(currentChat.knowledgeBaseId ?? null);
+        if (currentChat && currentChat.knowledgeBaseId !== undefined) {
+            // Chat has an explicitly set KB (could be null for "no KB" or a string for a specific KB)
+            setSelectedKB(currentChat.knowledgeBaseId);
         }
-    }, [currentChat?.knowledgeBaseId]);
+    }, [currentChat]);
 
     // Default to isDefault KB for new intent
     useEffect(() => {
@@ -342,6 +342,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                 const newChatId = await createChatMutation({
                     patientId: patientId as Id<"patients">,
                     title: title,
+                    knowledgeBaseId: selectedKB || undefined, // Persist KB selection
                 });
 
                 chatIdToUse = newChatId;
@@ -719,9 +720,16 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                                 <div className="mt-3 pt-2 border-t border-slate-200 dark:border-zinc-800 animate-fade-in">
                                                     <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-1.5 block">Sources</span>
                                                     {uniqueSources.map((src: Source, i: number) => (
-                                                        <div key={i} className="bg-slate-50 dark:bg-zinc-950/50 rounded-lg px-2.5 py-1.5 mt-1 border border-slate-100 dark:border-zinc-800">
+                                                        <div
+                                                            key={i}
+                                                            onClick={() => setViewingDocument({
+                                                                filename: src.title,
+                                                                page: src.pageNumber || 1
+                                                            })}
+                                                            className="bg-slate-50 dark:bg-zinc-950/50 rounded-lg px-2.5 py-1.5 mt-1 border border-slate-100 dark:border-zinc-800 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors"
+                                                        >
                                                             <p className="text-[11px] font-medium text-slate-700 dark:text-zinc-300">{src.title}</p>
-                                                            <p className="text-[10px] text-slate-500 dark:text-zinc-500 mt-0.5 line-clamp-1">{src.snippet}</p>
+                                                            <p className="text-[10px] text-slate-500 dark:text-zinc-500 mt-0.5 line-clamp-1">{src.snippet || "Click to view document"}</p>
                                                         </div>
                                                     ))}
                                                 </div>

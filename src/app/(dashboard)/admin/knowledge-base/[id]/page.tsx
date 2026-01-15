@@ -26,6 +26,14 @@ import { Modal } from "@/components/ui/modal";
 import { ContentSkeleton } from "@/components/ui/skeleton";
 import { deleteDocument, uploadDocument, TaskStatusResponse } from "@/lib/rag-api";
 
+// Type for tracking pending uploads
+interface PendingUpload {
+    id: string;
+    filename: string;
+    progress: string;
+    status: "uploading" | "processing" | "error";
+}
+
 export default function KnowledgeBaseDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -40,6 +48,7 @@ export default function KnowledgeBaseDetailPage() {
         chromaDocumentId: string;
     } | null>(null);
     const [isDeletingDoc, setIsDeletingDoc] = useState(false);
+    const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
 
     const knowledgeBase = useQuery(api.knowledgeBases.get, {
         id: kbId as Id<"knowledgeBases">,
@@ -195,6 +204,31 @@ export default function KnowledgeBaseDetailPage() {
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100 dark:divide-zinc-800">
+                        {/* Pending Uploads */}
+                        {pendingUploads.map((upload) => (
+                            <div
+                                key={upload.id}
+                                className="px-5 py-4 flex items-center justify-between bg-indigo-50/50 dark:bg-indigo-950/20"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400">
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-slate-900 dark:text-white">
+                                            {upload.filename}
+                                        </div>
+                                        <div className="text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                                            <span>{upload.progress}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-medium">
+                                    Processing
+                                </span>
+                            </div>
+                        ))}
+                        {/* Existing Documents */}
                         {documents.map((doc) => (
                             <div
                                 key={doc._id}
@@ -251,6 +285,21 @@ export default function KnowledgeBaseDetailPage() {
                 onClose={() => setIsUploadModalOpen(false)}
                 knowledgeBaseId={kbId as Id<"knowledgeBases">}
                 chromaCollectionId={knowledgeBase.chromaCollectionId}
+                onStartUpload={({ id, filename }) => {
+                    // Add to pending uploads
+                    setPendingUploads(prev => [...prev, {
+                        id,
+                        filename,
+                        progress: "Starting upload...",
+                        status: "uploading"
+                    }]);
+
+                    // Set up removal after a delay (Convex will show the actual doc when ready)
+                    // The pending upload will be automatically hidden when Convex shows the real document
+                    setTimeout(() => {
+                        setPendingUploads(prev => prev.filter(u => u.id !== id));
+                    }, 60000); // Remove after 60s as fallback
+                }}
             />
 
             {/* Edit Modal */}
@@ -365,15 +414,15 @@ function UploadModal({
     onClose,
     knowledgeBaseId,
     chromaCollectionId,
+    onStartUpload,
 }: {
     isOpen: boolean;
     onClose: () => void;
     knowledgeBaseId: Id<"knowledgeBases">;
     chromaCollectionId: string;
+    onStartUpload: (upload: { id: string; filename: string; onProgress: (progress: string) => void; onComplete: () => void; onError: (error: string) => void }) => void;
 }) {
     const [file, setFile] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState("");
     const [fastMode, setFastMode] = useState(true); // Default to fast mode
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -394,19 +443,33 @@ function UploadModal({
     const handleUpload = async () => {
         if (!file) return;
 
-        setIsUploading(true);
+        const uploadId = `upload-${Date.now()}`;
+        const filename = file.name;
+        const currentFile = file;
+        const currentFastMode = fastMode;
+
+        // Close modal immediately and reset state
+        setFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        onClose();
+
+        // Start the upload in background, passing callbacks
+        onStartUpload({
+            id: uploadId,
+            filename,
+            onProgress: () => { }, // Will be set by parent
+            onComplete: () => { }, // Will be set by parent
+            onError: () => { }, // Will be set by parent
+        });
+
+        // Run the actual upload in background
         try {
             // 1. Upload to Convex Storage
-            setUploadProgress("Uploading to storage...");
-
-            // Get upload URL
             const postUrl = await generateUploadUrl();
-
-            // Upload file
             const storageResult = await fetch(postUrl, {
                 method: "POST",
-                headers: { "Content-Type": file.type },
-                body: file,
+                headers: { "Content-Type": currentFile.type },
+                body: currentFile,
             });
 
             if (!storageResult.ok) {
@@ -416,52 +479,33 @@ function UploadModal({
             const { storageId } = await storageResult.json();
 
             // 2. Generate document ID for RAG
-            setUploadProgress("Preparing RAG processing...");
             const { chromaDocumentId } = await generateDocumentId();
 
-            // 3. Upload to FastAPI (V2 async with progress)
-            setUploadProgress("Submitting for processing...");
-
+            // 3. Upload to FastAPI
             const result = await uploadDocument(
                 chromaCollectionId,
-                file,
+                currentFile,
                 chromaDocumentId,
                 (status: TaskStatusResponse) => {
-                    // Update progress based on task status
-                    if (status.state === "PENDING") {
-                        setUploadProgress("Queued for processing...");
-                    } else if (status.state === "PROCESSING") {
-                        const step = status.progress?.step || "processing";
-                        const message = status.progress?.message || "Processing document...";
-                        setUploadProgress(message);
-                    }
+                    // Progress updates are handled by parent via pendingUploads state
                 },
-                fastMode // Pass fast mode parameter
+                currentFastMode
             );
 
             // 4. Record in Convex
-            setUploadProgress("Finalizing...");
             await addDocument({
                 knowledgeBaseId,
-                filename: file.name,
+                filename,
                 chromaDocumentId,
                 storageId: storageId as Id<"_storage">,
-                fileSize: file.size,
+                fileSize: currentFile.size,
                 pageCount: result.page_count,
                 chunkCount: result.chunks_created,
             });
 
-            // Reset and close
-            setFile(null);
-            setUploadProgress("");
-            if (fileInputRef.current) fileInputRef.current.value = "";
-            onClose();
         } catch (error: any) {
             console.error("Error uploading:", error);
-            alert(`Failed to upload: ${error.message}`);
-        } finally {
-            setIsUploading(false);
-            setUploadProgress("");
+            alert(`Failed to upload ${filename}: ${error.message}`);
         }
     };
 
@@ -469,22 +513,19 @@ function UploadModal({
         <Modal
             isOpen={isOpen}
             onClose={() => {
-                if (!isUploading) {
-                    setFile(null);
-                    setUploadProgress("");
-                    onClose();
-                }
+                setFile(null);
+                onClose();
             }}
             title="Upload Document"
         >
             <div className="space-y-4">
                 {/* Drop Zone */}
                 <div
-                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    onClick={() => fileInputRef.current?.click()}
                     className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${file
                         ? "border-indigo-300 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950/30"
                         : "border-slate-300 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-700"
-                        } ${isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
+                        }`}
                 >
                     <input
                         ref={fileInputRef}
@@ -492,7 +533,6 @@ function UploadModal({
                         accept=".pdf"
                         onChange={handleFileChange}
                         className="hidden"
-                        disabled={isUploading}
                     />
                     {file ? (
                         <div className="flex items-center justify-center gap-3">
@@ -519,14 +559,6 @@ function UploadModal({
                     )}
                 </div>
 
-                {/* Progress */}
-                {uploadProgress && (
-                    <div className="flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {uploadProgress}
-                    </div>
-                )}
-
                 {/* Fast Mode Toggle */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700">
                     <div className="flex items-center gap-2">
@@ -541,8 +573,7 @@ function UploadModal({
                     <button
                         type="button"
                         onClick={() => setFastMode(!fastMode)}
-                        disabled={isUploading}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${fastMode ? "bg-amber-500" : "bg-slate-200 dark:bg-zinc-700"
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${fastMode ? "bg-amber-500" : "bg-slate-200 dark:bg-zinc-700"
                             }`}
                     >
                         <span
@@ -557,30 +588,19 @@ function UploadModal({
                     <button
                         onClick={() => {
                             setFile(null);
-                            setUploadProgress("");
                             onClose();
                         }}
-                        disabled={isUploading}
-                        className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleUpload}
-                        disabled={isUploading || !file}
+                        disabled={!file}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50"
                     >
-                        {isUploading ? (
-                            <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Uploading...
-                            </>
-                        ) : (
-                            <>
-                                <Upload className="h-4 w-4" />
-                                Upload
-                            </>
-                        )}
+                        <Upload className="h-4 w-4" />
+                        Upload
                     </button>
                 </div>
             </div>

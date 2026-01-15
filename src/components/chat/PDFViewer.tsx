@@ -28,15 +28,23 @@ export function PDFViewer({ url, fileName, isLoading, onClose, className, initia
     // Reset loading state when URL changes
     React.useEffect(() => {
         setIsDocumentLoaded(false);
+        setNumPages(0); // Reset page count when URL changes
     }, [url]);
 
     // Update page number if initialPage changes (e.g. clicking different citations)
+    // Clamp to valid range when numPages is known
     React.useEffect(() => {
-        setPageNumber(initialPage);
-    }, [initialPage]);
+        if (numPages > 0) {
+            setPageNumber(Math.min(Math.max(1, initialPage), numPages));
+        } else {
+            setPageNumber(initialPage);
+        }
+    }, [initialPage, numPages]);
 
-    function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-        setNumPages(numPages);
+    function onDocumentLoadSuccess({ numPages: loadedNumPages }: { numPages: number }) {
+        setNumPages(loadedNumPages);
+        // Clamp current page number to valid range
+        setPageNumber(prev => Math.min(Math.max(1, prev), loadedNumPages));
         setIsDocumentLoaded(true);
     }
 
