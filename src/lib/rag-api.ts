@@ -2,7 +2,7 @@
  * Custom hook for interacting with the FastAPI RAG backend.
  */
 
-const RAG_API_URL = process.env.NEXT_PUBLIC_RAG_API_URL || "http://localhost:8000";
+const RAG_API_URL = process.env.NEXT_PUBLIC_RAG_API_URL || "https://nonabstemiously-stocky-cynthia.ngrok-free.dev";
 
 /**
  * Helper to handle API errors, robust to non-JSON responses (e.g. HTML 404s)
@@ -136,7 +136,9 @@ export async function deleteCollection(collectionId: string): Promise<DeleteResp
  * Get stats for a collection
  */
 export async function getCollectionStats(collectionId: string): Promise<CollectionInfo> {
-    const response = await fetch(`${RAG_API_URL}/collections/${collectionId}/stats`);
+    const response = await fetch(`${RAG_API_URL}/collections/${collectionId}/stats`, {
+        headers: { "ngrok-skip-browser-warning": "true" }
+    });
 
     if (!response.ok) {
         await handleApiError(response, "Failed to get collection stats");
@@ -153,7 +155,9 @@ export async function getCollectionStats(collectionId: string): Promise<Collecti
  * Get the status of an async upload task (V2)
  */
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
-    const response = await fetch(`${RAG_API_URL}/tasks/${taskId}`);
+    const response = await fetch(`${RAG_API_URL}/tasks/${taskId}`, {
+        headers: { "ngrok-skip-browser-warning": "true" }
+    });
 
     if (!response.ok) {
         await handleApiError(response, "Failed to get task status");
@@ -229,6 +233,7 @@ export async function uploadDocument(
     // Step 1: Submit upload (returns immediately with task_id)
     const response = await fetch(url, {
         method: "POST",
+        headers: { "ngrok-skip-browser-warning": "true" },
         body: formData,
     });
 
@@ -274,7 +279,9 @@ export async function deleteDocument(
  * List documents in a collection
  */
 export async function listDocuments(collectionId: string): Promise<DocumentInfo[]> {
-    const response = await fetch(`${RAG_API_URL}/embeddings/${collectionId}`);
+    const response = await fetch(`${RAG_API_URL}/embeddings/${collectionId}`, {
+        headers: { "ngrok-skip-browser-warning": "true" }
+    });
 
     if (!response.ok) {
         await handleApiError(response, "Failed to list documents");
@@ -474,7 +481,9 @@ export async function checkHealth(): Promise<{
     status: string;
     total_collections: number;
 }> {
-    const response = await fetch(`${RAG_API_URL}/`);
+    const response = await fetch(`${RAG_API_URL}/`, {
+        headers: { "ngrok-skip-browser-warning": "true" }
+    });
 
     if (!response.ok) {
         await handleApiError(response, "RAG backend health check failed");
