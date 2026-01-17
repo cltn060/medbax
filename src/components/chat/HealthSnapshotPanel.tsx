@@ -55,128 +55,136 @@ export function HealthSnapshotPanel({ patient, onClose }: HealthSnapshotPanelPro
 
     return (
         <>
-            {/* Mobile: Full-screen overlay */}
-            <div className="md:hidden fixed inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col animate-slide-in-left">
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
-                    <h3 className="text-base font-medium text-slate-900 dark:text-white">Health Context</h3>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors touch-target"
-                    >
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
+            {/* Mobile: Large modal overlay with margins */}
+            <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center p-3">
+                {/* Backdrop */}
+                <div
+                    className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+                    onClick={onClose}
+                />
+                {/* Modal container */}
+                <div className="relative bg-white dark:bg-zinc-950 rounded-2xl flex flex-col animate-slide-in-left w-full max-w-md h-[90vh] max-h-[650px] shadow-2xl overflow-hidden">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
+                        <h3 className="text-base font-medium text-slate-900 dark:text-white">Health Context</h3>
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors touch-target"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
-                            <div className="text-xs text-slate-500 dark:text-zinc-500">Age</div>
-                            <div className="text-2xl font-semibold text-slate-900 dark:text-white">
-                                {age ?? "—"}
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        {/* Quick Stats */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
+                                <div className="text-xs text-slate-500 dark:text-zinc-500">Age</div>
+                                <div className="text-2xl font-semibold text-slate-900 dark:text-white">
+                                    {age ?? "—"}
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
+                                <div className="text-xs text-slate-500 dark:text-zinc-500">Sex</div>
+                                <div className="text-2xl font-semibold text-slate-900 dark:text-white capitalize">
+                                    {patient.biologicalSex?.charAt(0).toUpperCase() ?? "—"}
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
+                                <div className="text-xs text-slate-500 dark:text-zinc-500">BMI</div>
+                                <div className="text-2xl font-semibold text-slate-900 dark:text-white">
+                                    {bmi ?? "—"}
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
+                                <div className="text-xs text-slate-500 dark:text-zinc-500">Weight</div>
+                                <div className="text-2xl font-semibold text-slate-900 dark:text-white">
+                                    {patient.weightKg ?? "—"}<span className="text-sm font-normal">kg</span>
+                                </div>
                             </div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
-                            <div className="text-xs text-slate-500 dark:text-zinc-500">Sex</div>
-                            <div className="text-2xl font-semibold text-slate-900 dark:text-white capitalize">
-                                {patient.biologicalSex?.charAt(0).toUpperCase() ?? "—"}
+
+                        {/* Conditions */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Heart className="h-4 w-4 text-red-500" />
+                                <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">Conditions</span>
                             </div>
+                            {patient.chronicConditions && patient.chronicConditions.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {patient.chronicConditions.map((c, i) => (
+                                        <span
+                                            key={i}
+                                            className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm rounded-full"
+                                        >
+                                            {c.condition}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-400 dark:text-zinc-500 italic">None recorded</p>
+                            )}
                         </div>
-                        <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
-                            <div className="text-xs text-slate-500 dark:text-zinc-500">BMI</div>
-                            <div className="text-2xl font-semibold text-slate-900 dark:text-white">
-                                {bmi ?? "—"}
+
+                        {/* Allergies */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">Allergies</span>
                             </div>
+                            {patient.allergies && patient.allergies.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {patient.allergies.map((a, i) => (
+                                        <span
+                                            key={i}
+                                            className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm rounded-full"
+                                        >
+                                            {a.agent}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-400 dark:text-zinc-500 italic">None recorded</p>
+                            )}
                         </div>
-                        <div className="bg-slate-50 dark:bg-zinc-900 rounded-xl p-4">
-                            <div className="text-xs text-slate-500 dark:text-zinc-500">Weight</div>
-                            <div className="text-2xl font-semibold text-slate-900 dark:text-white">
-                                {patient.weightKg ?? "—"}<span className="text-sm font-normal">kg</span>
+
+                        {/* Medications */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Pill className="h-4 w-4 text-indigo-500" />
+                                <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">
+                                    Medications ({patient.medications?.length ?? 0})
+                                </span>
                             </div>
+                            {patient.medications && patient.medications.length > 0 ? (
+                                <div className="space-y-2">
+                                    {patient.medications.map((m, i) => (
+                                        <div
+                                            key={i}
+                                            className="text-sm bg-slate-50 dark:bg-zinc-900 rounded-xl px-4 py-3"
+                                        >
+                                            <span className="font-medium text-slate-900 dark:text-white">{m.name}</span>
+                                            <span className="text-slate-400 dark:text-zinc-500"> • {m.dosage}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-400 dark:text-zinc-500 italic">None recorded</p>
+                            )}
                         </div>
                     </div>
 
-                    {/* Conditions */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <Heart className="h-4 w-4 text-red-500" />
-                            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">Conditions</span>
-                        </div>
-                        {patient.chronicConditions && patient.chronicConditions.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                                {patient.chronicConditions.map((c, i) => (
-                                    <span
-                                        key={i}
-                                        className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm rounded-full"
-                                    >
-                                        {c.condition}
-                                    </span>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-400 dark:text-zinc-500 italic">None recorded</p>
-                        )}
+                    {/* Footer */}
+                    <div className="p-4 border-t border-slate-200 dark:border-zinc-800 shrink-0">
+                        <button
+                            onClick={() => setIsProfileModalOpen(true)}
+                            className="flex items-center justify-center gap-2 w-full py-3 px-4 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
+                        >
+                            View Full Profile
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
                     </div>
-
-                    {/* Allergies */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">Allergies</span>
-                        </div>
-                        {patient.allergies && patient.allergies.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                                {patient.allergies.map((a, i) => (
-                                    <span
-                                        key={i}
-                                        className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm rounded-full"
-                                    >
-                                        {a.agent}
-                                    </span>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-400 dark:text-zinc-500 italic">None recorded</p>
-                        )}
-                    </div>
-
-                    {/* Medications */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <Pill className="h-4 w-4 text-indigo-500" />
-                            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">
-                                Medications ({patient.medications?.length ?? 0})
-                            </span>
-                        </div>
-                        {patient.medications && patient.medications.length > 0 ? (
-                            <div className="space-y-2">
-                                {patient.medications.map((m, i) => (
-                                    <div
-                                        key={i}
-                                        className="text-sm bg-slate-50 dark:bg-zinc-900 rounded-xl px-4 py-3"
-                                    >
-                                        <span className="font-medium text-slate-900 dark:text-white">{m.name}</span>
-                                        <span className="text-slate-400 dark:text-zinc-500"> • {m.dosage}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-400 dark:text-zinc-500 italic">None recorded</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-slate-200 dark:border-zinc-800 shrink-0">
-                    <button
-                        onClick={() => setIsProfileModalOpen(true)}
-                        className="flex items-center justify-center gap-2 w-full py-3 px-4 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors"
-                    >
-                        View Full Profile
-                        <ChevronRight className="h-4 w-4" />
-                    </button>
                 </div>
             </div>
 
@@ -226,24 +234,19 @@ export function HealthSnapshotPanel({ patient, onClose }: HealthSnapshotPanelPro
                     {/* Conditions */}
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <Heart className="h-4 w-4 text-red-500" />
-                            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">Conditions</span>
+                            <Heart className="h-3 w-3 text-red-500" />
+                            <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-zinc-400">Conditions</span>
                         </div>
                         {patient.chronicConditions && patient.chronicConditions.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
-                                {patient.chronicConditions.slice(0, 4).map((c, i) => (
+                                {patient.chronicConditions.map((c, i) => (
                                     <span
                                         key={i}
-                                        className="px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs rounded-full"
+                                        className="px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs rounded-full"
                                     >
                                         {c.condition}
                                     </span>
                                 ))}
-                                {patient.chronicConditions.length > 4 && (
-                                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs rounded-full">
-                                        +{patient.chronicConditions.length - 4}
-                                    </span>
-                                )}
                             </div>
                         ) : (
                             <p className="text-xs text-slate-400 dark:text-zinc-500 italic">None recorded</p>
@@ -253,24 +256,19 @@ export function HealthSnapshotPanel({ patient, onClose }: HealthSnapshotPanelPro
                     {/* Allergies */}
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
-                            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">Allergies</span>
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                            <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-zinc-400">Allergies</span>
                         </div>
                         {patient.allergies && patient.allergies.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
-                                {patient.allergies.slice(0, 4).map((a, i) => (
+                                {patient.allergies.map((a, i) => (
                                     <span
                                         key={i}
-                                        className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs rounded-full"
+                                        className="px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs rounded-full"
                                     >
                                         {a.agent}
                                     </span>
                                 ))}
-                                {patient.allergies.length > 4 && (
-                                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 text-xs rounded-full">
-                                        +{patient.allergies.length - 4}
-                                    </span>
-                                )}
                             </div>
                         ) : (
                             <p className="text-xs text-slate-400 dark:text-zinc-500 italic">None recorded</p>
@@ -280,27 +278,22 @@ export function HealthSnapshotPanel({ patient, onClose }: HealthSnapshotPanelPro
                     {/* Medications */}
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <Pill className="h-4 w-4 text-indigo-500" />
-                            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-zinc-400">
+                            <Pill className="h-3 w-3 text-indigo-500" />
+                            <span className="text-[10px] font-semibold uppercase text-slate-500 dark:text-zinc-400">
                                 Medications ({patient.medications?.length ?? 0})
                             </span>
                         </div>
                         {patient.medications && patient.medications.length > 0 ? (
                             <div className="space-y-1">
-                                {patient.medications.slice(0, 3).map((m, i) => (
+                                {patient.medications.map((m, i) => (
                                     <div
                                         key={i}
-                                        className="text-xs bg-slate-50 dark:bg-zinc-900 rounded-lg px-2 py-1.5"
+                                        className="text-xs bg-slate-50 dark:bg-zinc-900 rounded-lg px-3 py-2"
                                     >
                                         <span className="font-medium text-slate-900 dark:text-white">{m.name}</span>
                                         <span className="text-slate-400 dark:text-zinc-500"> • {m.dosage}</span>
                                     </div>
                                 ))}
-                                {patient.medications.length > 3 && (
-                                    <p className="text-xs text-slate-400 dark:text-zinc-500">
-                                        +{patient.medications.length - 3} more
-                                    </p>
-                                )}
                             </div>
                         ) : (
                             <p className="text-xs text-slate-400 dark:text-zinc-500 italic">None recorded</p>

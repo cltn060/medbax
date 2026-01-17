@@ -218,9 +218,17 @@ export function KnowledgeBaseBrowser({
 
     return (
         <>
-            {/* Mobile: Full-screen overlay */}
-            <div className="md:hidden fixed inset-0 z-50 bg-slate-50 dark:bg-zinc-950 flex flex-col animate-slide-in-left">
-                {panelContent}
+            {/* Mobile: Large modal overlay with margins */}
+            <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center p-3">
+                {/* Backdrop */}
+                <div
+                    className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+                    onClick={onClose}
+                />
+                {/* Modal container */}
+                <div className="relative bg-slate-50 dark:bg-zinc-950 rounded-2xl flex flex-col animate-slide-in-left w-full max-w-md h-[90vh] max-h-[650px] shadow-2xl overflow-hidden">
+                    {panelContent}
+                </div>
             </div>
 
             {/* Desktop: Side panel */}

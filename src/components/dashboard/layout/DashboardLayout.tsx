@@ -36,9 +36,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     return (
         <SidebarProvider>
-            <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/40 dark:from-black dark:via-zinc-900 dark:to-indigo-950">
+            <div className="flex h-dvh bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-100/40 dark:from-black dark:via-zinc-900 dark:to-indigo-950">
                 <Sidebar />
-                <div className="flex flex-1 flex-col overflow-hidden relative">
+                <div className="flex flex-1 flex-col overflow-hidden relative min-h-0">
                     {/* Decorative elements - visible in both modes */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute -top-1/4 -right-1/4 w-[80%] h-[80%] rounded-full border border-indigo-200/30 dark:border-white/5"></div>

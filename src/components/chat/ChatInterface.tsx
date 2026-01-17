@@ -477,8 +477,8 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
     const isLoadingMessages = chatId && messages === undefined;
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-transparent overflow-hidden">
-            <div className="flex-1 flex overflow-hidden">
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-transparent overflow-hidden min-h-0">
+            <div className="flex-1 flex overflow-hidden min-h-0">
                 {/* Knowledge Base Browser Panel - Left Side */}
                 <KnowledgeBaseBrowser
                     isOpen={kbBrowserOpen}
@@ -546,25 +546,25 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
                     {/* Messages Area */}
                     <div className={cn(
-                        "flex-1 scrollbar-hide px-4 py-4 space-y-6",
-                        messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
+                        "flex-1 scrollbar-hide px-2 md:px-4 py-2 md:py-4 space-y-6",
+                        isWelcomeMode ? "overflow-hidden" : (messages.length > 0 ? "overflow-y-auto" : "overflow-hidden")
                     )}>
                         {/* Welcome Screen - ONLY when no chatId */}
                         {isWelcomeMode && (
-                            <div className="flex flex-col h-full max-w-3xl mx-auto w-full justify-center px-3 md:px-4 py-6 md:py-0">
-                                <h1 className="text-3xl sm:text-4xl md:text-5xl font-medium text-slate-900 dark:text-white mb-2 md:mb-2 font-kalice tracking-tight animate-fade-in-up">
+                            <div className="flex flex-col h-full max-w-3xl mx-auto w-full justify-center px-2 md:px-4">
+                                <h1 className="text-2xl sm:text-3xl md:text-5xl font-medium text-slate-900 dark:text-white mb-1 md:mb-2 font-kalice tracking-tight animate-fade-in-up">
                                     Hi there, <span className="text-slate-500 dark:text-zinc-500">{currentUser?.name?.split(' ')[0] || 'User'}</span>
                                 </h1>
-                                <h2 className="text-3xl sm:text-4xl md:text-5xl font-medium text-slate-400 dark:text-zinc-500 mb-6 md:mb-8 font-kalice tracking-tight animate-fade-in-up [animation-delay:100ms]">
+                                <h2 className="text-2xl sm:text-3xl md:text-5xl font-medium text-slate-400 dark:text-zinc-500 mb-4 md:mb-8 font-kalice tracking-tight animate-fade-in-up [animation-delay:100ms]">
                                     What would like to know?
                                 </h2>
 
-                                <div className="text-sm text-slate-500 dark:text-zinc-500 mb-4 md:mb-6 animate-fade-in-up [animation-delay:200ms]">
+                                <div className="text-xs md:text-sm text-slate-500 dark:text-zinc-500 mb-3 md:mb-6 animate-fade-in-up [animation-delay:200ms]">
                                     Use one of the most common prompts below or use your own to begin
                                 </div>
 
                                 {/* Prompt Suggestions - 2 on mobile, 4 on desktop */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 md:mb-8">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 mb-4 md:mb-8">
                                     {[
                                         {
                                             title: "Review my recent lab results",
@@ -597,21 +597,21 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                             key={i}
                                             onClick={() => handleSend(prompt.prompt)}
                                             className={cn(
-                                                "text-left p-4 rounded-xl border border-slate-200/60 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-md hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-200 group hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10 animate-fade-in-up",
+                                                "text-left p-3 md:p-4 rounded-xl border border-slate-200/60 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-md hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-200 group hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10 animate-fade-in-up",
                                                 (prompt as any).hideOnMobile && "hidden sm:block"
                                             )}
                                             style={{ animationDelay: `${300 + i * 75}ms` }}
                                         >
-                                            <div className="text-sm font-medium text-slate-800 dark:text-zinc-200">{prompt.title}</div>
-                                            <div className="text-sm text-slate-500 dark:text-zinc-500 mb-3 md:mb-4">{prompt.subtitle}</div>
+                                            <div className="text-xs md:text-sm font-medium text-slate-800 dark:text-zinc-200">{prompt.title}</div>
+                                            <div className="text-xs md:text-sm text-slate-500 dark:text-zinc-500 mb-2 md:mb-4">{prompt.subtitle}</div>
                                             <div className="flex justify-between items-end">
-                                                <span className="text-lg opacity-60 group-hover:opacity-100 transition-opacity">{prompt.icon}</span>
+                                                <span className="text-base md:text-lg opacity-60 group-hover:opacity-100 transition-opacity">{prompt.icon}</span>
                                             </div>
                                         </button>
                                     ))}
                                 </div>
 
-                                <div className="flex items-center gap-4">
+                                <div className="hidden md:flex items-center gap-4">
                                     <button className="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-zinc-300 transition-colors w-fit">
                                         <Sparkles className="h-3.5 w-3.5" />
                                         Refresh Prompts
@@ -766,7 +766,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-zinc-800/50 text-xs font-medium text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors border border-slate-200 dark:border-zinc-700/50"
                                     >
                                         <Database className="h-3 w-3" />
-                                        <span className="max-w-[120px] truncate">
+                                        <span className="max-w-[30px] md:max-w-[120px] truncate">
                                             {selectedKB
                                                 ? publicKBs?.find(kb => kb.chromaCollectionId === selectedKB)?.name || "Selected"
                                                 : "Select KB"}
@@ -825,7 +825,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                             <textarea
                                 ref={textareaRef}
                                 rows={1}
-                                className="w-full bg-transparent border-0 text-slate-900 dark:text-[#eee] placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:ring-0 focus:outline-none resize-none py-3 px-2 min-h-[60px] max-h-48 scrollbar-hide text-base pt-8 md:pt-3"
+                                className="w-full bg-transparent border-0 text-slate-900 dark:text-[#eee] placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:ring-0 focus:outline-none resize-none py-3 px-2 min-h-[60px] max-h-48 scrollbar-hide text-base pt-1 md:pt-3"
                                 placeholder={isAtLimit ? "Query limit reached..." : "Ask whatever you want..."}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}

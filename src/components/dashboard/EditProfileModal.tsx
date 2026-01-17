@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -316,16 +317,19 @@ export function MedicalProfileModal({ isOpen, onClose }: MedicalProfileModalProp
         return `${age} years old`;
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center md:p-4">
-            {/* Backdrop - only visible on desktop */}
+    // Use portal to render outside of sidebar stacking context
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4">
+            {/* Backdrop - visible on both mobile and desktop */}
             <div
-                className="hidden md:block absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
+                className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
                 onClick={onClose}
             />
 
-            {/* Modal Container - Full screen on mobile, centered modal on desktop */}
-            <div className="relative bg-white dark:bg-[#111113] md:rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden w-full h-full md:w-full md:max-w-[920px] md:h-[600px] border-0 md:border border-zinc-200 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
+            {/* Modal Container - Large modal with margins on mobile, centered modal on desktop */}
+            <div className="relative bg-white dark:bg-[#111113] rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden w-full max-w-md md:max-w-[920px] h-[90vh] max-h-[650px] md:h-[600px] md:max-h-none border border-zinc-200 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
 
                 {/* --- Mobile Header (visible only on mobile) --- */}
                 <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 shrink-0">
@@ -748,7 +752,8 @@ export function MedicalProfileModal({ isOpen, onClose }: MedicalProfileModalProp
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 

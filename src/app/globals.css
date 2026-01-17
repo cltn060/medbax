@@ -14,6 +14,21 @@
   font-family: "Inter", sans-serif;
 }
 
+/* Dynamic Viewport Height - Fix for iOS Safari address bar */
+/* h-dvh uses 100dvh which properly accounts for browser chrome */
+.h-dvh {
+  height: 100vh;
+  /* Fallback for browsers that don't support dvh */
+  height: 100dvh;
+}
+
+/* Ensure proper iOS Safari behavior */
+@supports (-webkit-touch-callout: none) {
+  .h-dvh {
+    height: -webkit-fill-available;
+  }
+}
+
 /* Custom Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 6px;
@@ -291,6 +306,7 @@ iframe.skiptranslate,
   from {
     transform: translateX(-100%);
   }
+
   to {
     transform: translateX(0);
   }
@@ -300,6 +316,7 @@ iframe.skiptranslate,
   from {
     transform: translateX(0);
   }
+
   to {
     transform: translateX(-100%);
   }
@@ -309,6 +326,7 @@ iframe.skiptranslate,
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -318,6 +336,7 @@ iframe.skiptranslate,
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -366,5 +385,6 @@ iframe.skiptranslate,
 }
 
 .dark .mobile-panel-overlay {
-  background-color: #09090b; /* zinc-950 */
+  background-color: #09090b;
+  /* zinc-950 */
 }
