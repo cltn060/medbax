@@ -648,7 +648,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                     )}
                                 >
                                     <div className={cn(
-                                        "rounded-2xl px-4 py-2.5 transition-all duration-200",
+                                        "rounded-2xl px-4 py-2.5 transition-all duration-200 overflow-hidden",
                                         msg.role === "user" ? "max-w-[85%]" : "max-w-full",
                                         msg.role === "user"
                                             ? "bg-indigo-600 text-white"
@@ -671,7 +671,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                                 <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:300ms]"></span>
                                             </div>
                                         ) : (
-                                            <div className="text-sm leading-relaxed markdown-content">
+                                            <div className="text-sm leading-relaxed markdown-content break-words overflow-x-auto">
                                                 <ReactMarkdown
                                                     urlTransform={(url) => url}
                                                     components={{
@@ -714,7 +714,19 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                                         ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-2" {...props} />,
                                                         ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-2" {...props} />,
                                                         li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                                                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap" {...props} />,
+                                                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap break-words" {...props} />,
+                                                        code: ({ node, className, children, ...props }) => {
+                                                            const isInline = !className;
+                                                            if (isInline) {
+                                                                return <code className="bg-slate-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-xs break-all" {...props}>{children}</code>;
+                                                            }
+                                                            return (
+                                                                <code className="block bg-slate-100 dark:bg-zinc-800 p-2 rounded text-xs overflow-x-auto whitespace-pre" {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            );
+                                                        },
+                                                        pre: ({ node, ...props }) => <pre className="overflow-x-auto my-2 rounded bg-slate-100 dark:bg-zinc-800" {...props} />,
                                                     }}
                                                 >
                                                     {preprocessContent(msg.content)}
