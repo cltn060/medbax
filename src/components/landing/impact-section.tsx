@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, FileCode, Users, ClipboardList } from "lucide-react";
+import { Upload, Brain, Database, FileCheck } from "lucide-react";
 import { ScrollReveal } from "./scroll-reveal";
 
 export function ImpactSection() {
@@ -9,52 +9,52 @@ export function ImpactSection() {
             <div className="max-w-7xl mx-auto relative z-20">
                 <ScrollReveal>
                     <h2 className="text-4xl md:text-6xl text-slate-900 dark:text-white font-medium mb-16 tracking-tight">
-                        Autonomous impact <br />
-                        <span className="text-slate-500 dark:text-zinc-500">on Hospitals</span>
+                        Why users love <br />
+                        <span className="text-slate-500 dark:text-zinc-500">MedBax</span>
                     </h2>
                 </ScrollReveal>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 relative">
                     <ScrollReveal delay={100}>
                         <div className="space-y-2">
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">Midi Health</p>
-                            <p className="text-5xl text-slate-900 dark:text-white font-light">93.8%</p>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">Complete Profile</p>
+                            <p className="text-5xl text-slate-900 dark:text-white font-light">100%</p>
                             <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400 text-xs">
-                                <FileCode size={14} />
-                                <span>Accurate ICD-10 coding</span>
+                                <Upload size={14} />
+                                <span>Your medical history in one place</span>
                             </div>
                         </div>
                     </ScrollReveal>
 
                     <ScrollReveal delay={200}>
                         <div className="space-y-2">
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">Ascend Medical</p>
-                            <p className="text-5xl text-slate-900 dark:text-white font-light">11%</p>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">Personalized</p>
+                            <p className="text-5xl text-slate-900 dark:text-white font-light">Tailored</p>
                             <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400 text-xs">
-                                <Activity size={14} />
-                                <span>Increase in additional visits</span>
+                                <Brain size={14} />
+                                <span>AI deductions based on YOUR data</span>
                             </div>
                         </div>
                     </ScrollReveal>
 
                     <ScrollReveal delay={300}>
                         <div className="space-y-2">
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">ACG</p>
-                            <p className="text-5xl text-slate-900 dark:text-white font-light">98%</p>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">RAG-Powered</p>
+                            <p className="text-5xl text-slate-900 dark:text-white font-light">Grounded</p>
                             <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400 text-xs">
-                                <Users size={14} />
-                                <span>Drop in call abandonment</span>
+                                <Database size={14} />
+                                <span>Answers from medical knowledge bases</span>
                             </div>
                         </div>
                     </ScrollReveal>
 
                     <ScrollReveal delay={400}>
                         <div className="space-y-2">
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">Pure Psych</p>
-                            <p className="text-5xl text-slate-900 dark:text-white font-light">$200k</p>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-zinc-500 font-bold">Cited Sources</p>
+                            <p className="text-5xl text-slate-900 dark:text-white font-light">Verified</p>
                             <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400 text-xs">
-                                <ClipboardList size={14} />
-                                <span>Generated from missed appts</span>
+                                <FileCheck size={14} />
+                                <span>Every answer backed by sources</span>
                             </div>
                         </div>
                     </ScrollReveal>

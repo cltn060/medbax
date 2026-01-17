@@ -164,6 +164,25 @@ function OnboardingFlow() {
         // Step 6 (pricing) is handled by its own buttons
     };
 
+    const handleSkipToPricing = async () => {
+        setLoading(true);
+        try {
+            // Save whatever data we have so far
+            await createPatient({
+                ...formData,
+                allergies: formData.allergies.map(a => ({ ...a, reactionType: a.reactionType as "allergy" | "intolerance" })),
+            });
+            // Jump to pricing
+            setStep(6);
+            await updateOnboardingStep({ step: 6 });
+        } catch (e) {
+            console.error("Failed to save partial data", e);
+            alert("Failed to save profile. Check console for details.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSkipUpgrade = async () => {
         setLoading(true);
         try {
@@ -255,7 +274,7 @@ function OnboardingFlow() {
                     <UserButton afterSignOutUrl="/" />
                 </div>
 
-                <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 overflow-y-auto">
+                <div className="flex-1 flex flex-col justify-start items-center p-6 md:p-12 pt-6 md:pt-24 overflow-y-auto">
                     <div className="w-full max-w-2xl">
                         {/* Step Counter */}
                         <div className="mb-10 flex items-center gap-3">
@@ -279,14 +298,23 @@ function OnboardingFlow() {
 
                         {/* Footer Navigation */}
                         {step < 6 && (
-                            <div className="mt-12 flex items-center justify-between pt-6 border-t border-slate-100 dark:border-zinc-900">
-                                <button onClick={handleBack} disabled={step === 1} className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${step === 1 ? 'text-slate-300 dark:text-zinc-700 cursor-not-allowed' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}>
-                                    Go Back
-                                </button>
-                                <button onClick={handleNext} disabled={loading} className="group flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:translate-y-[-1px] transition-all disabled:opacity-70 disabled:cursor-wait">
-                                    {loading ? "Saving..." : step === 5 ? "Continue to Pricing" : "Continue"}
-                                    {!loading && <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />}
-                                </button>
+                            <div className="mt-12 pt-6 border-t border-slate-100 dark:border-zinc-900">
+                                <div className="flex items-center justify-between gap-4">
+                                    <button onClick={handleBack} disabled={step === 1} className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors ${step === 1 ? 'text-slate-300 dark:text-zinc-700 cursor-not-allowed' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}>
+                                        Go Back
+                                    </button>
+                                    <div className="flex items-center gap-4">
+                                        {step >= 2 && step <= 5 && (
+                                            <button onClick={handleSkipToPricing} disabled={loading} className="px-6 py-2.5 rounded-lg text-sm font-medium transition-colors bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-70 disabled:cursor-wait">
+                                                {loading ? "Skipping..." : "Skip"}
+                                            </button>
+                                        )}
+                                        <button onClick={handleNext} disabled={loading} className="group flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-black px-8 py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:translate-y-[-1px] transition-all disabled:opacity-70 disabled:cursor-wait">
+                                            {loading ? "Saving..." : step === 5 ? "Continue to Pricing" : "Continue"}
+                                            {!loading && <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -483,14 +511,14 @@ function StepLifestyle({ data, update }: { data: PatientFormData, update: any })
                     <Users size={16} className="text-slate-400" />
                     <Label>Family History</Label>
                 </div>
-                <div className="flex gap-2">
-                    <select className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl px-3 text-sm outline-none" value={famInput.relation} onChange={e => setFamInput({ ...famInput, relation: e.target.value })}>
+                <div className="flex flex-col md:flex-row gap-2">
+                    <select className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm outline-none" value={famInput.relation} onChange={e => setFamInput({ ...famInput, relation: e.target.value })}>
                         <option>Parent</option>
                         <option>Sibling</option>
                         <option>Grandparent</option>
                     </select>
                     <input type="text" placeholder="Condition..." className="flex-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-sm outline-none" value={famInput.condition} onChange={e => setFamInput({ ...famInput, condition: e.target.value })} />
-                    <button onClick={addFam} className="bg-slate-900 dark:bg-white text-white dark:text-black px-4 rounded-xl text-sm font-medium">Add</button>
+                    <button onClick={addFam} className="bg-slate-900 dark:bg-white text-white dark:text-black px-4 py-2 rounded-xl text-sm font-medium">Add</button>
                 </div>
                 <ul className="space-y-2">
                     {data.familyHistory.map((item, idx) => (

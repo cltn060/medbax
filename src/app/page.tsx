@@ -118,12 +118,12 @@ export default function LandingPage() {
         <div className="relative w-full min-h-[95vh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-black dark:via-zinc-900 dark:to-indigo-950 flex flex-col overflow-hidden z-20">
 
           {/* Background Decoration */}
-          <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[120vw] h-[120vw] rounded-[100%] border-[1px] border-indigo-200/50 dark:border-white/10 pointer-events-none"></div>
-          <div className="absolute top-[21%] left-[48%] -translate-x-1/2 w-[118vw] h-[118vw] rounded-[100%] border-[1px] border-blue-200/30 dark:border-white/5 pointer-events-none"></div>
-          <div className="absolute top-[25%] left-1/2 -translate-x-1/2 w-80 h-80 bg-indigo-300/30 dark:bg-indigo-500/30 rounded-full blur-[100px] pointer-events-none"></div>
+          <div className="absolute top-[18%] md:top-[12%] lg:top-[20%] left-1/2 -translate-x-1/2 w-[120vw] h-[120vw] rounded-[100%] border-[1px] border-indigo-200/50 dark:border-white/10 pointer-events-none"></div>
+          <div className="absolute top-[19%] md:top-[13%] lg:top-[21%] left-[48%] -translate-x-1/2 w-[118vw] h-[118vw] rounded-[100%] border-[1px] border-blue-200/30 dark:border-white/5 pointer-events-none"></div>
+          <div className="absolute top-[23%] md:top-[17%] lg:top-[25%] left-1/2 -translate-x-1/2 w-80 h-80 bg-indigo-300/30 dark:bg-indigo-500/30 rounded-full blur-[100px] pointer-events-none"></div>
 
           {/* Glowing Star */}
-          <div className="absolute top-[calc(20%-1px)] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+          <div className="absolute top-[calc(18%-1px)] md:top-[calc(12%-1px)] lg:top-[calc(20%-1px)] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
             <div className="relative flex items-center justify-center animate-twinkle">
               <Sparkles className="text-indigo-500 dark:text-white w-6 h-6 fill-indigo-400 dark:fill-white drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
               <div className="absolute inset-0 bg-indigo-400/60 dark:bg-white/60 blur-lg rounded-full scale-125"></div>
@@ -158,10 +158,10 @@ export default function LandingPage() {
           </nav>
 
           {/* Hero Text */}
-          <main className="relative z-10 w-full px-4 pt-10 md:pt-24 text-center flex-grow flex flex-col items-center">
+          <main className="relative z-10 w-full px-4 pt-16 md:pt-26 text-center flex-grow flex flex-col items-center">
             <ScrollReveal>
-              <h2 className="text-5xl md:text-7xl font-medium tracking-tight mb-6 leading-[1.1] drop-shadow-sm text-slate-900 dark:text-white">Your Personal <br /> Medical AI Companion</h2>
-              <p className="text-lg md:text-xl text-slate-600 dark:text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light">Upload your medical history and get personalized, evidence-based health insights powered by comprehensive knowledge bases covering all body systems.</p>
+              <h2 className="text-5xl md:text-7xl font-medium tracking-tight mb-6 leading-[1.1] drop-shadow-sm text-slate-900 dark:text-white">Your Complete <br /> Medical Profile</h2>
+              <p className="text-lg md:text-xl text-slate-600 dark:text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed font-light">Build your complete medical profile and get personalized health insights. Our RAG-powered AI analyzes your medical history to deliver evidence-based deductions tailored just for you.</p>
 
               <div className="relative w-full max-w-2xl mx-auto mb-10 group px-4 z-50">
                 <div className="absolute -inset-1 bg-gradient-to-r from-indigo-400/30 to-blue-400/30 dark:from-indigo-600/30 dark:to-blue-600/20 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition duration-500"></div>
@@ -257,8 +257,8 @@ export default function LandingPage() {
         <PricingSection />
 
         {/* --- FOOTER --- */}
-        <footer className="py-12 text-center text-slate-500 dark:text-zinc-600 text-sm border-t border-slate-200 dark:border-zinc-900 bg-slate-50 dark:bg-black relative z-20">
-          <div className="mb-4 flex items-center justify-center gap-2 opacity-50">
+        <footer className="py-6 text-center text-slate-500 dark:text-zinc-600 text-sm border-t border-slate-200 dark:border-zinc-900 bg-slate-50 dark:bg-black relative z-20">
+          <div className="mb-2 flex items-center justify-center gap-2 opacity-50">
             <span className="font-bold">MedBax</span>
           </div>
           &copy; 2025 MedBax AI. All rights reserved.
