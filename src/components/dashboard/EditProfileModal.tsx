@@ -317,19 +317,55 @@ export function MedicalProfileModal({ isOpen, onClose }: MedicalProfileModalProp
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center md:p-4">
+            {/* Backdrop - only visible on desktop */}
             <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
+                className="hidden md:block absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
                 onClick={onClose}
             />
 
-            {/* Modal Container - Increased Dimensions: max-w-[920px] and h-[600px] */}
-            <div className="relative bg-white dark:bg-[#111113] rounded-2xl shadow-2xl flex overflow-hidden w-full max-w-[920px] h-[600px] border border-zinc-200 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
+            {/* Modal Container - Full screen on mobile, centered modal on desktop */}
+            <div className="relative bg-white dark:bg-[#111113] md:rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden w-full h-full md:w-full md:max-w-[920px] md:h-[600px] border-0 md:border border-zinc-200 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
 
-                {/* --- Sidebar --- */}
+                {/* --- Mobile Header (visible only on mobile) --- */}
+                <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 shrink-0">
+                    <h2 className="text-base font-semibold text-zinc-900 dark:text-white">
+                        Medical Profile
+                    </h2>
+                    <button
+                        onClick={onClose}
+                        className="p-2 -mr-2 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors touch-target"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                {/* --- Mobile Tab Navigation (horizontal scrollable) --- */}
+                <div className="md:hidden flex overflow-x-auto border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shrink-0">
+                    {tabs.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex-shrink-0 flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all",
+                                    isActive
+                                        ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+                                        : "border-transparent text-zinc-500 dark:text-zinc-400"
+                                )}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* --- Desktop Sidebar (hidden on mobile) --- */}
                 {/* Slightly wider sidebar (240px) to balance the larger modal */}
-                <div className="w-[240px] bg-zinc-50/50 dark:bg-zinc-900/30 border-r border-zinc-200 dark:border-zinc-800 flex flex-col shrink-0">
+                <div className="hidden md:flex w-[240px] bg-zinc-50/50 dark:bg-zinc-900/30 border-r border-zinc-200 dark:border-zinc-800 flex-col shrink-0">
 
                     {/* Sidebar Nav */}
                     <nav className="flex-1 p-3 space-y-1 mt-2">
@@ -372,9 +408,9 @@ export function MedicalProfileModal({ isOpen, onClose }: MedicalProfileModalProp
                 </div>
 
                 {/* --- Main Content --- */}
-                <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#111113]">
-                    {/* Header */}
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex justify-between items-center">
+                <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#111113] overflow-hidden">
+                    {/* Header - Desktop only (mobile has its own header above) */}
+                    <div className="hidden md:flex px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50 justify-between items-center shrink-0">
                         <div>
                             <h2 className="text-base font-semibold text-zinc-900 dark:text-white">
                                 {tabs.find((t) => t.id === activeTab)?.label}
@@ -392,7 +428,7 @@ export function MedicalProfileModal({ isOpen, onClose }: MedicalProfileModalProp
                     </div>
 
                     {/* Scrollable Content Area */}
-                    <div className="flex-1 overflow-y-auto px-6 py-6">
+                    <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-6">
                         {isSaving && (
                             <div className="absolute inset-0 bg-white/50 dark:bg-zinc-900/50 flex items-center justify-center z-10 backdrop-blur-[1px]">
                                 <Loader2 className="h-6 w-6 animate-spin text-zinc-900 dark:text-white" />

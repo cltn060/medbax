@@ -503,20 +503,20 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                 )}>
                     {/* Header - only when in a specific chat */}
                     {!isWelcomeMode && (
-                        <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shrink-0">
+                        <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 border-b border-slate-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shrink-0">
                             <button
                                 onClick={() => {
                                     setKbBrowserOpen(!kbBrowserOpen);
                                 }}
                                 className={cn(
-                                    "p-1.5 rounded-md transition-colors",
+                                    "p-2 md:p-1.5 rounded-lg md:rounded-md transition-colors touch-target md:min-w-0 md:min-h-0",
                                     kbBrowserOpen
                                         ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                                         : "text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
                                 )}
                                 title="Knowledge bases"
                             >
-                                <Database className="h-4 w-4" />
+                                <Database className="h-5 w-5 md:h-4 md:w-4" />
                             </button>
                             <div className="flex-1 min-w-0">
                                 {currentChat ? (
@@ -532,14 +532,14 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                             <button
                                 onClick={() => setHealthPanelOpen(!healthPanelOpen)}
                                 className={cn(
-                                    "p-1.5 rounded-md transition-colors",
+                                    "p-2 md:p-1.5 rounded-lg md:rounded-md transition-colors touch-target md:min-w-0 md:min-h-0",
                                     healthPanelOpen
                                         ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                                         : "text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
                                 )}
                                 title="Health context"
                             >
-                                <User className="h-4 w-4" />
+                                <User className="h-5 w-5 md:h-4 md:w-4" />
                             </button>
                         </div>
                     )}
@@ -551,20 +551,20 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     )}>
                         {/* Welcome Screen - ONLY when no chatId */}
                         {isWelcomeMode && (
-                            <div className="flex flex-col h-full max-w-3xl mx-auto w-full justify-center px-4">
-                                <h1 className="text-4xl md:text-5xl font-medium text-slate-900 dark:text-white mb-2 font-kalice tracking-tight animate-fade-in-up">
+                            <div className="flex flex-col h-full max-w-3xl mx-auto w-full justify-center px-3 md:px-4 py-6 md:py-0">
+                                <h1 className="text-3xl sm:text-4xl md:text-5xl font-medium text-slate-900 dark:text-white mb-2 md:mb-2 font-kalice tracking-tight animate-fade-in-up">
                                     Hi there, <span className="text-slate-500 dark:text-zinc-500">{currentUser?.name?.split(' ')[0] || 'User'}</span>
                                 </h1>
-                                <h2 className="text-4xl md:text-5xl font-medium text-slate-400 dark:text-zinc-500 mb-8 font-kalice tracking-tight animate-fade-in-up [animation-delay:100ms]">
+                                <h2 className="text-3xl sm:text-4xl md:text-5xl font-medium text-slate-400 dark:text-zinc-500 mb-6 md:mb-8 font-kalice tracking-tight animate-fade-in-up [animation-delay:100ms]">
                                     What would like to know?
                                 </h2>
 
-                                <div className="text-sm text-slate-500 dark:text-zinc-500 mb-6 animate-fade-in-up [animation-delay:200ms]">
+                                <div className="text-sm text-slate-500 dark:text-zinc-500 mb-4 md:mb-6 animate-fade-in-up [animation-delay:200ms]">
                                     Use one of the most common prompts below or use your own to begin
                                 </div>
 
-                                {/* Prompt Suggestions */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+                                {/* Prompt Suggestions - 2 on mobile, 4 on desktop */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 md:mb-8">
                                     {[
                                         {
                                             title: "Review my recent lab results",
@@ -582,23 +582,28 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                             title: "Help me understand my",
                                             subtitle: "chronic condition better",
                                             icon: "❤️",
-                                            prompt: "I'd like to better understand my chronic condition. Can you provide information about management strategies and lifestyle considerations?"
+                                            prompt: "I'd like to better understand my chronic condition. Can you provide information about management strategies and lifestyle considerations?",
+                                            hideOnMobile: true
                                         },
                                         {
                                             title: "Create a health summary",
                                             subtitle: "for my upcoming appointment",
                                             icon: "📋",
-                                            prompt: "Can you create a summary of my health history and current concerns for my upcoming doctor's appointment?"
+                                            prompt: "Can you create a summary of my health history and current concerns for my upcoming doctor's appointment?",
+                                            hideOnMobile: true
                                         }
                                     ].map((prompt, i) => (
                                         <button
                                             key={i}
                                             onClick={() => handleSend(prompt.prompt)}
-                                            className="text-left p-4 rounded-xl border border-slate-200/60 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-md hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-200 group hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10 animate-fade-in-up"
+                                            className={cn(
+                                                "text-left p-4 rounded-xl border border-slate-200/60 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-md hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-200 group hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10 animate-fade-in-up",
+                                                (prompt as any).hideOnMobile && "hidden sm:block"
+                                            )}
                                             style={{ animationDelay: `${300 + i * 75}ms` }}
                                         >
                                             <div className="text-sm font-medium text-slate-800 dark:text-zinc-200">{prompt.title}</div>
-                                            <div className="text-sm text-slate-500 dark:text-zinc-500 mb-4">{prompt.subtitle}</div>
+                                            <div className="text-sm text-slate-500 dark:text-zinc-500 mb-3 md:mb-4">{prompt.subtitle}</div>
                                             <div className="flex justify-between items-end">
                                                 <span className="text-lg opacity-60 group-hover:opacity-100 transition-opacity">{prompt.icon}</span>
                                             </div>
@@ -750,7 +755,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     </div>
                     {/* Input Area logic remains same but ensuring it's in the flex col */}
                     {/* Input Area */}
-                    <div className="p-6 bg-transparent shrink-0">
+                    <div className="p-3 md:p-6 bg-transparent shrink-0">
                         <div className="max-w-3xl mx-auto rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-xl p-3 shadow-lg shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-white/10 relative">
 
                             {/* KB Selector */}
@@ -890,15 +895,28 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
                 {/* PDF Viewer Panel */}
                 {viewingDocument && (
-                    <div className="w-1/2 h-full animate-slide-in-right">
-                        <PDFViewer
-                            url={resolvedUrl || null}
-                            fileName={viewingDocument.filename}
-                            isLoading={isLoadingUrl}
-                            onClose={() => setViewingDocument(null)}
-                            initialPage={viewingDocument.page}
-                        />
-                    </div>
+                    <>
+                        {/* Desktop: Side panel */}
+                        <div className="hidden md:block w-1/2 h-full animate-slide-in-right">
+                            <PDFViewer
+                                url={resolvedUrl || null}
+                                fileName={viewingDocument.filename}
+                                isLoading={isLoadingUrl}
+                                onClose={() => setViewingDocument(null)}
+                                initialPage={viewingDocument.page}
+                            />
+                        </div>
+                        {/* Mobile: PDFViewer renders its own full-screen overlay */}
+                        <div className="md:hidden">
+                            <PDFViewer
+                                url={resolvedUrl || null}
+                                fileName={viewingDocument.filename}
+                                isLoading={isLoadingUrl}
+                                onClose={() => setViewingDocument(null)}
+                                initialPage={viewingDocument.page}
+                            />
+                        </div>
+                    </>
                 )}
 
                 {/* Health Snapshot Panel - Right Side */}

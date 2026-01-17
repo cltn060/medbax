@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { Database, ChevronRight, FileText, Check, X } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
@@ -31,6 +31,19 @@ export function KnowledgeBaseBrowser({
         expandedKB ? { knowledgeBaseId: expandedKB } : "skip"
     );
 
+    // Prevent body scroll when panel is open on mobile
+    useEffect(() => {
+        if (isOpen) {
+            const isMobile = window.innerWidth < 768;
+            if (isMobile) {
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const handleKBClick = (kbId: Id<"knowledgeBases">) => {
@@ -42,24 +55,24 @@ export function KnowledgeBaseBrowser({
         onClose();
     };
 
-    return (
-        <div className="w-72 h-full bg-slate-50 dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 flex flex-col animate-slide-in-left shrink-0">
+    const panelContent = (
+        <>
             {/* Panel Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <div className="flex items-center justify-between px-4 py-3 md:py-2 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
                 <div className="flex items-center gap-2">
                     <Database className="h-4 w-4 text-indigo-500" />
-                    <span className="text-sm font-medium text-slate-900 dark:text-white">Knowledge Bases</span>
+                    <span className="text-base md:text-sm font-medium text-slate-900 dark:text-white">Knowledge Bases</span>
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="p-2 md:p-1.5 rounded-lg md:rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors touch-target md:min-w-0 md:min-h-0"
                 >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5 md:h-4 md:w-4" />
                 </button>
             </div>
 
             {/* KB List */}
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-3 md:p-2">
                 {!knowledgeBases ? (
                     <div className="flex items-center justify-center py-8">
                         <div className="h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -69,7 +82,7 @@ export function KnowledgeBaseBrowser({
                         No knowledge bases available
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3 md:space-y-2">
                         {knowledgeBases.map((kb) => {
                             const isExpanded = expandedKB === kb._id;
                             const isSelected = selectedKB === kb.chromaCollectionId;
@@ -78,7 +91,7 @@ export function KnowledgeBaseBrowser({
                                 <div
                                     key={kb._id}
                                     className={cn(
-                                        "rounded-lg border transition-all",
+                                        "rounded-xl md:rounded-lg border transition-all",
                                         isSelected
                                             ? "border-indigo-400 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10"
                                             : "border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600"
@@ -87,8 +100,8 @@ export function KnowledgeBaseBrowser({
                                     {/* KB Header */}
                                     <div
                                         className={cn(
-                                            "flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-all",
-                                            isExpanded ? "rounded-t-md" : "rounded-md",
+                                            "flex items-center gap-3 md:gap-2 px-4 md:px-3 py-4 md:py-2.5 cursor-pointer transition-all",
+                                            isExpanded ? "rounded-t-xl md:rounded-t-md" : "rounded-xl md:rounded-md",
                                             isSelected
                                                 ? "bg-indigo-50 dark:bg-indigo-900/20"
                                                 : "hover:bg-slate-50 dark:hover:bg-zinc-800/50"
@@ -97,14 +110,14 @@ export function KnowledgeBaseBrowser({
                                     >
                                         <ChevronRight
                                             className={cn(
-                                                "h-4 w-4 text-slate-400 transition-transform shrink-0",
+                                                "h-5 w-5 md:h-4 md:w-4 text-slate-400 transition-transform shrink-0",
                                                 isExpanded && "rotate-90"
                                             )}
                                         />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <span className={cn(
-                                                    "text-sm font-medium truncate",
+                                                    "text-base md:text-sm font-medium truncate",
                                                     isSelected
                                                         ? "text-indigo-700 dark:text-indigo-300"
                                                         : "text-slate-700 dark:text-zinc-300"
@@ -112,10 +125,10 @@ export function KnowledgeBaseBrowser({
                                                     {kb.name}
                                                 </span>
                                                 {isSelected && (
-                                                    <Check className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                                                    <Check className="h-4 w-4 md:h-3.5 md:w-3.5 text-indigo-500 shrink-0" />
                                                 )}
                                             </div>
-                                            <div className="text-[10px] text-slate-500 dark:text-zinc-500">
+                                            <div className="text-xs md:text-[10px] text-slate-500 dark:text-zinc-500">
                                                 {kb.documentCount} document{kb.documentCount !== 1 ? "s" : ""}
                                             </div>
                                         </div>
@@ -128,7 +141,7 @@ export function KnowledgeBaseBrowser({
                                             <button
                                                 onClick={() => handleSelectAsContext(kb.chromaCollectionId)}
                                                 className={cn(
-                                                    "w-full flex items-center gap-2 px-4 py-2 text-xs font-medium transition-colors border-b border-slate-100 dark:border-zinc-800",
+                                                    "w-full flex items-center gap-3 md:gap-2 px-4 py-3 md:py-2 text-sm md:text-xs font-medium transition-colors border-b border-slate-100 dark:border-zinc-800",
                                                     isSelected
                                                         ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10"
                                                         : "text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
@@ -136,25 +149,25 @@ export function KnowledgeBaseBrowser({
                                             >
                                                 {isSelected ? (
                                                     <>
-                                                        <Check className="h-3.5 w-3.5" />
+                                                        <Check className="h-4 w-4 md:h-3.5 md:w-3.5" />
                                                         Currently Selected
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Database className="h-3.5 w-3.5" />
+                                                        <Database className="h-4 w-4 md:h-3.5 md:w-3.5" />
                                                         Use as Context
                                                     </>
                                                 )}
                                             </button>
 
                                             {/* Documents List */}
-                                            <div className="max-h-48 overflow-y-auto">
+                                            <div className="max-h-60 md:max-h-48 overflow-y-auto">
                                                 {!documents ? (
                                                     <div className="flex items-center justify-center py-4">
                                                         <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
                                                     </div>
                                                 ) : documents.length === 0 ? (
-                                                    <div className="text-center py-4 text-slate-400 dark:text-zinc-600 text-xs">
+                                                    <div className="text-center py-4 text-slate-400 dark:text-zinc-600 text-sm md:text-xs">
                                                         No documents yet
                                                     </div>
                                                 ) : (
@@ -162,12 +175,12 @@ export function KnowledgeBaseBrowser({
                                                         {documents.map((doc) => (
                                                             <div
                                                                 key={doc._id}
-                                                                className="flex items-center gap-2 px-4 py-1.5 text-xs text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50"
+                                                                className="flex items-center gap-3 md:gap-2 px-4 py-2.5 md:py-1.5 text-sm md:text-xs text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800/50"
                                                             >
-                                                                <FileText className="h-3.5 w-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
+                                                                <FileText className="h-4 w-4 md:h-3.5 md:w-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
                                                                 <span className="truncate">{doc.filename}</span>
                                                                 {doc.pageCount && (
-                                                                    <span className="text-[10px] text-slate-400 dark:text-zinc-600 shrink-0">
+                                                                    <span className="text-xs md:text-[10px] text-slate-400 dark:text-zinc-600 shrink-0">
                                                                         {doc.pageCount}p
                                                                     </span>
                                                                 )}
@@ -179,8 +192,8 @@ export function KnowledgeBaseBrowser({
 
                                             {/* KB Description */}
                                             {kb.description && (
-                                                <div className="px-4 py-2 border-t border-slate-100 dark:border-zinc-800">
-                                                    <p className="text-[10px] text-slate-500 dark:text-zinc-500 line-clamp-2">
+                                                <div className="px-4 py-3 md:py-2 border-t border-slate-100 dark:border-zinc-800">
+                                                    <p className="text-xs md:text-[10px] text-slate-500 dark:text-zinc-500 line-clamp-2">
                                                         {kb.description}
                                                     </p>
                                                 </div>
@@ -195,11 +208,25 @@ export function KnowledgeBaseBrowser({
             </div>
 
             {/* Footer hint */}
-            <div className="px-4 py-2 border-t border-slate-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50">
-                <p className="text-[10px] text-slate-400 dark:text-zinc-600 text-center">
+            <div className="px-4 py-3 md:py-2 border-t border-slate-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 shrink-0">
+                <p className="text-xs md:text-[10px] text-slate-400 dark:text-zinc-600 text-center">
                     Click a KB to select it as chat context
                 </p>
             </div>
-        </div>
+        </>
+    );
+
+    return (
+        <>
+            {/* Mobile: Full-screen overlay */}
+            <div className="md:hidden fixed inset-0 z-50 bg-slate-50 dark:bg-zinc-950 flex flex-col animate-slide-in-left">
+                {panelContent}
+            </div>
+
+            {/* Desktop: Side panel */}
+            <div className="hidden md:flex w-72 h-full bg-slate-50 dark:bg-zinc-950 border-r border-slate-200 dark:border-zinc-800 flex-col animate-slide-in-left shrink-0">
+                {panelContent}
+            </div>
+        </>
     );
 }

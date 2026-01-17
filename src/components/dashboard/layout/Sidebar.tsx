@@ -11,6 +11,7 @@ import { MedBaxLogo } from "../../Logo";
 import { DeleteConfirmDialog } from "../../ui/DeleteConfirmDialog";
 import { UserMenuDropdown } from "./UserMenuDropdown";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { useSidebar } from "./SidebarContext";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -21,7 +22,10 @@ export function Sidebar() {
     const [isDeleting, setIsDeleting] = useState(false);
     const sidebarRef = useRef<HTMLDivElement>(null);
 
-    // Collapse expanded list when clicking outside sidebar
+    // Mobile sidebar state from context
+    const { isMobileOpen, closeMobileSidebar } = useSidebar();
+
+    // Close expanded list when clicking outside sidebar (desktop)
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
@@ -34,6 +38,23 @@ export function Sidebar() {
             return () => document.removeEventListener("mousedown", handleClickOutside);
         }
     }, [isExpanded]);
+
+    // Close mobile sidebar on route change
+    useEffect(() => {
+        closeMobileSidebar();
+    }, [pathname, closeMobileSidebar]);
+
+    // Prevent body scroll when mobile sidebar is open
+    useEffect(() => {
+        if (isMobileOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isMobileOpen]);
 
     // Fetch patient and chats
     const patient = useQuery(api.patients.getMyPatient);
@@ -68,14 +89,9 @@ export function Sidebar() {
     };
     const currentChatId = getCurrentChatId();
 
-    return (
-        <div
-            ref={sidebarRef}
-            className={cn(
-                "flex h-full flex-col bg-white dark:bg-zinc-950 border-r border-slate-300 dark:border-zinc-800 transition-all duration-300 relative",
-                isCollapsed ? "w-[70px]" : "w-[70px] md:w-60"
-            )}
-        >
+    // Sidebar content (shared between mobile and desktop)
+    const sidebarContent = (
+        <>
             {/* Toggle Button (Desktop Only) */}
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
@@ -89,14 +105,15 @@ export function Sidebar() {
                 href="/dashboard/chat"
                 className={cn(
                     "flex h-14 items-center border-b border-slate-300 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer",
-                    isCollapsed ? "justify-center px-0" : "justify-center md:justify-start px-0 md:px-6"
+                    isCollapsed ? "justify-center px-0" : "justify-start px-6"
                 )}
+                onClick={() => closeMobileSidebar()}
             >
-                <div className={cn("shrink-0", isCollapsed ? "mx-auto" : "md:mr-3")}>
+                <div className={cn("shrink-0", isCollapsed ? "mx-auto" : "mr-3")}>
                     <MedBaxLogo size={22} />
                 </div>
                 {!isCollapsed && (
-                    <span className="hidden md:block text-lg font-bold tracking-tight text-slate-900 dark:text-white truncate mt-0.5">
+                    <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white truncate mt-0.5">
                         MedBax
                     </span>
                 )}
@@ -109,16 +126,17 @@ export function Sidebar() {
                     href="/dashboard/chat"
                     className={cn(
                         "group flex items-center py-2.5 text-sm font-medium border-b border-slate-200 dark:border-zinc-800 transition-all duration-200",
-                        isCollapsed ? "justify-center px-0" : "justify-center md:justify-start px-0 md:px-6",
+                        isCollapsed ? "justify-center px-0" : "justify-start px-6",
                         pathname === "/dashboard/chat" || pathname === "/dashboard"
                             ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
                             : "bg-white dark:bg-zinc-900/50 text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white"
                     )}
                     title={isCollapsed ? "New Chat" : undefined}
+                    onClick={() => closeMobileSidebar()}
                 >
                     <div className={cn(
                         "shrink-0 p-1 rounded-md transition-colors",
-                        !isCollapsed && "md:mr-3",
+                        !isCollapsed && "mr-3",
                         pathname === "/dashboard/chat" || pathname === "/dashboard"
                             ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
                             : "bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-500 group-hover:bg-slate-200 dark:group-hover:bg-zinc-700"
@@ -126,13 +144,13 @@ export function Sidebar() {
                         <Plus className="h-4 w-4" aria-hidden="true" />
                     </div>
                     {!isCollapsed && (
-                        <span className="hidden md:block truncate">New Chat</span>
+                        <span className="truncate">New Chat</span>
                     )}
                 </Link>
 
-                {/* Search Input - Desktop Expanded Only */}
+                {/* Search Input - Only when expanded */}
                 {!isCollapsed && (
-                    <div className="hidden md:block px-3 pt-3">
+                    <div className="px-3 pt-3">
                         <div className="relative">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500" />
                             <input
@@ -156,7 +174,7 @@ export function Sidebar() {
 
                 {/* Chats Section */}
                 {!isCollapsed && displayChats.length > 0 && (
-                    <div className="hidden md:flex md:flex-col px-3 pt-3 flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex flex-col px-3 pt-3 flex-1 min-h-0 overflow-y-auto">
                         <div className="text-[10px] font-semibold text-slate-400 dark:text-zinc-600 uppercase tracking-wider px-3 mb-2">
                             {searchQuery.trim() ? `Results (${filteredChats.length})` : "Recent"}
                         </div>
@@ -182,6 +200,7 @@ export function Sidebar() {
                                                     : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
                                             )}
                                             title={chat.title}
+                                            onClick={() => closeMobileSidebar()}
                                         >
                                             <MessageSquare className={cn(
                                                 "h-3.5 w-3.5 shrink-0",
@@ -243,6 +262,7 @@ export function Sidebar() {
                                             : "text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
                                     )}
                                     title={chat.title}
+                                    onClick={() => closeMobileSidebar()}
                                 >
                                     <MessageSquare className="h-4 w-4" />
                                 </Link>
@@ -274,6 +294,48 @@ export function Sidebar() {
                     }
                 }}
             />
-        </div>
+        </>
+    );
+
+    return (
+        <>
+            {/* Mobile Backdrop */}
+            {isMobileOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black/50 dark:bg-black/70 z-40 animate-fade-in-backdrop"
+                    onClick={closeMobileSidebar}
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* Desktop Sidebar - Always visible on md+ */}
+            <div
+                ref={sidebarRef}
+                className={cn(
+                    "hidden md:flex h-full flex-col bg-white dark:bg-zinc-950 border-r border-slate-300 dark:border-zinc-800 transition-all duration-300 relative",
+                    isCollapsed ? "w-[70px]" : "w-60"
+                )}
+            >
+                {sidebarContent}
+            </div>
+
+            {/* Mobile Sidebar Drawer - Only visible on mobile when open */}
+            <div
+                className={cn(
+                    "md:hidden fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-white dark:bg-zinc-950 border-r border-slate-300 dark:border-zinc-800 transition-transform duration-300 ease-out",
+                    isMobileOpen ? "translate-x-0" : "-translate-x-full"
+                )}
+            >
+                {/* Mobile Close Button */}
+                <button
+                    onClick={closeMobileSidebar}
+                    className="absolute top-3 right-3 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors z-10"
+                    aria-label="Close menu"
+                >
+                    <X className="h-5 w-5" />
+                </button>
+                {sidebarContent}
+            </div>
+        </>
     );
 }
