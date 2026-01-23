@@ -482,15 +482,25 @@ async def chat_stream(request: ChatRequest):
             if sources:
                 print(f"   📚 Sources: {[s.get('filename', 'N/A') for s in sources]}")
             
-            # Stream the AI response
+            # Stream the AI response and accumulate for logging
             chunk_count = 0
+            full_response = ""  # Accumulate full response for logging
             for chunk in response_stream:
                 content = chunk.choices[0].delta.content
                 if content:
                     chunk_count += 1
+                    full_response += content
                     yield content
             
             print(f"   ✓ Streamed {chunk_count} chunks")
+            
+            # DEBUG: Log the COMPLETE AI response
+            print(f"\n{'='*80} AI RESPONSE {'='*80}")
+            print(f"[AI RESPONSE] ({len(full_response)} chars):")
+            print(f"{'─'*80}")
+            print(full_response)
+            print(f"{'─'*80}")
+            print(f"{'='*80} END AI RESPONSE {'='*80}\n")
             
             # After streaming, append source metadata as JSON
             if sources:
@@ -499,17 +509,25 @@ async def chat_stream(request: ChatRequest):
                 # Frontend expects: {title, snippet, sourceType, chromaDocumentId, pageNumber}
                 transformed_sources = []
                 for src in sources:
+                    # page_number is now always an integer (0 means unknown)
+                    page_num = src.get("page_number", 0)
+                    # Ensure page is at least 1 for the frontend
+                    page_num = page_num if page_num and page_num > 0 else 1
+                    
                     transformed_sources.append({
                         "title": src.get("filename", src.get("title", "Unknown")),
                         "snippet": src.get("title", ""),  # Use section title as snippet
                         "sourceType": "kb_document",
                         "chromaDocumentId": src.get("chunk_id", ""),
-                        "pageNumber": src.get("page_number") if src.get("page_number") != "N/A" else None
+                        "pageNumber": page_num
                     })
                 
                 yield SOURCE_METADATA_DELIMITER
                 yield json.dumps(transformed_sources)
                 print(f"   ✓ Sent sources metadata ({len(transformed_sources)} sources)")
+                # DEBUG: Log exact page numbers being sent to frontend
+                for ts in transformed_sources:
+                    print(f"      -> {ts['title']}: pageNumber={ts['pageNumber']}")
             
             print(f"{'='*60}\n")
                 

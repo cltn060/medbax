@@ -235,6 +235,42 @@ export const update = mutation({
 });
 
 /**
+ * Rename a document
+ */
+export const renameDocument = mutation({
+    args: {
+        documentId: v.id("knowledgeBaseDocuments"),
+        newFilename: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Not authenticated");
+
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", (q) => q.eq("tokenIdentifier", identity.tokenIdentifier))
+            .unique();
+
+        if (!user || user.role !== "admin") {
+            throw new Error("Only admins can rename documents");
+        }
+
+        const doc = await ctx.db.get(args.documentId);
+        if (!doc) throw new Error("Document not found");
+
+        const sanitizedName = args.newFilename.endsWith(".pdf")
+            ? args.newFilename
+            : `${args.newFilename}.pdf`;
+
+        await ctx.db.patch(args.documentId, {
+            filename: sanitizedName,
+        });
+
+        return { success: true, filename: sanitizedName };
+    },
+});
+
+/**
  * Archive a knowledge base (soft delete)
  */
 export const archive = mutation({
@@ -422,6 +458,7 @@ export const addDocument = mutation({
         fileSize: v.number(),
         pageCount: v.optional(v.number()),
         chunkCount: v.number(),
+        fastMode: v.optional(v.boolean()),  // NEW: Track upload mode
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -447,6 +484,7 @@ export const addDocument = mutation({
             fileSize: args.fileSize,
             pageCount: args.pageCount,
             chunkCount: args.chunkCount,
+            fastMode: args.fastMode,  // NEW: Store fast mode flag
             uploadedBy: user._id,
             uploadedAt: Date.now(),
             status: "ready",

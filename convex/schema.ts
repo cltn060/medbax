@@ -177,6 +177,7 @@ export default defineSchema({
     fileSize: v.number(),
     pageCount: v.optional(v.number()),
     chunkCount: v.number(),
+    fastMode: v.optional(v.boolean()),   // Track if uploaded with fast mode
     uploadedBy: v.id("users"),
     uploadedAt: v.number(),
     status: v.union(

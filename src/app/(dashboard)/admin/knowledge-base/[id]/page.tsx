@@ -49,6 +49,11 @@ export default function KnowledgeBaseDetailPage() {
     const [isDeletingDoc, setIsDeletingDoc] = useState(false);
     const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
 
+    // NEW Rename State
+    const [renameDocId, setRenameDocId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState("");
+    const renameDocument = useMutation(api.knowledgeBases.renameDocument);
+
     const knowledgeBase = useQuery(api.knowledgeBases.get, {
         id: kbId as Id<"knowledgeBases">,
     });
@@ -267,10 +272,61 @@ export default function KnowledgeBaseDetailPage() {
                                         <FileText className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <div className="font-medium text-slate-900 dark:text-white">
-                                            {doc.filename}
-                                        </div>
-                                        <div className="text-xs text-slate-500 dark:text-zinc-500 flex items-center gap-2">
+                                        {renameDocId === doc._id ? (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={renameValue}
+                                                    onChange={(e) => setRenameValue(e.target.value)}
+                                                    className="px-2 py-1 text-sm border border-indigo-300 rounded bg-indigo-50 dark:bg-indigo-950/20 text-slate-900 dark:text-white focus:outline-none"
+                                                    autoFocus
+                                                    onKeyDown={async (e) => {
+                                                        if (e.key === 'Enter') {
+                                                            await renameDocument({ documentId: doc._id as Id<"knowledgeBaseDocuments">, newFilename: renameValue });
+                                                            setRenameDocId(null);
+                                                        } else if (e.key === 'Escape') {
+                                                            setRenameDocId(null);
+                                                        }
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={async () => {
+                                                        await renameDocument({ documentId: doc._id as Id<"knowledgeBaseDocuments">, newFilename: renameValue });
+                                                        setRenameDocId(null);
+                                                    }}
+                                                    className="p-1 text-green-600 hover:bg-green-100 rounded"
+                                                >
+                                                    <CheckCircle className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setRenameDocId(null)}
+                                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                                >
+                                                    <XCircle className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <div className="font-medium text-slate-900 dark:text-white cursor-pointer hover:text-indigo-600"
+                                                    onClick={() => {
+                                                        setRenameDocId(doc._id);
+                                                        setRenameValue(doc.filename);
+                                                    }}
+                                                >
+                                                    {doc.filename}
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        setRenameDocId(doc._id);
+                                                        setRenameValue(doc.filename);
+                                                    }}
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-indigo-500"
+                                                >
+                                                    <Pencil className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <div className="text-xs text-slate-500 dark:text-zinc-500 flex items-center gap-2 mt-0.5">
                                             <span>{doc.chunkCount} chunks</span>
                                             {doc.pageCount && (
                                                 <>
@@ -280,6 +336,12 @@ export default function KnowledgeBaseDetailPage() {
                                             )}
                                             <span>•</span>
                                             <span>{(doc.fileSize / 1024).toFixed(1)} KB</span>
+                                            {doc.fastMode && (
+                                                <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/50">
+                                                    <Zap className="h-3 w-3" />
+                                                    FAST
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -532,6 +594,7 @@ function UploadModal({
                 fileSize: currentFile.size,
                 pageCount: result.page_count,
                 chunkCount: result.chunks_created,
+                fastMode: currentFastMode,
             });
 
             // 3. Notify Parent that upload is COMPLETE

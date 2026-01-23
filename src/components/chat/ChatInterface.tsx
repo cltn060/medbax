@@ -735,27 +735,27 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                         )}
 
                                         {'sources' in msg && msg.sources && msg.sources.length > 0 && (() => {
-                                            // Deduplicate sources by title
-                                            const uniqueSources = Array.from(
-                                                new Map(msg.sources.map((src: Source) => [src.title, src])).values()
+                                            // Deduplicate sources by title (book name) - show each book only once
+                                            const uniqueBooks = Array.from(
+                                                new Set(msg.sources.map((src: Source) => src.title))
                                             );
 
                                             return (
                                                 <div className="mt-3 pt-2 border-t border-slate-200 dark:border-zinc-800 animate-fade-in">
-                                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-1.5 block">Sources</span>
-                                                    {uniqueSources.map((src: Source, i: number) => (
-                                                        <div
-                                                            key={i}
-                                                            onClick={() => setViewingDocument({
-                                                                filename: src.title,
-                                                                page: src.pageNumber || 1
-                                                            })}
-                                                            className="bg-slate-50 dark:bg-zinc-950/50 rounded-lg px-2.5 py-1.5 mt-1 border border-slate-100 dark:border-zinc-800 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors"
-                                                        >
-                                                            <p className="text-[11px] font-medium text-slate-700 dark:text-zinc-300">{src.title}</p>
-                                                            <p className="text-[10px] text-slate-500 dark:text-zinc-500 mt-0.5 line-clamp-1">{src.snippet || "Click to view document"}</p>
-                                                        </div>
-                                                    ))}
+                                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-1.5 block">Sources Used</span>
+                                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                                        {uniqueBooks.map((bookName: string, i: number) => (
+                                                            <div
+                                                                key={i}
+                                                                className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800/50 rounded-full px-2.5 py-1 border border-slate-200 dark:border-zinc-700"
+                                                            >
+                                                                <Database className="h-3 w-3 text-indigo-500" />
+                                                                <span className="text-[10px] font-medium text-slate-600 dark:text-zinc-400 truncate max-w-[200px]">
+                                                                    {bookName}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             );
                                         })()}

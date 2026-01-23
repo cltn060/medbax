@@ -209,14 +209,25 @@ def add_documents(
     
     # Prepare records WITHOUT embeddings (LanceDB will auto-generate)
     records = []
+    
+    # DEBUG: Log first metadata to see what we're receiving
+    if metadatas:
+        print(f"\n[DEBUG INGESTION] First chunk metadata keys: {list(metadatas[0].keys())}")
+        print(f"[DEBUG INGESTION] page_numbers value: {metadatas[0].get('page_numbers')}")
+        print(f"[DEBUG INGESTION] source value: {metadatas[0].get('source')}")
+    
     for i, (text, metadata, chunk_id) in enumerate(zip(texts, metadatas, ids)):
         # Handle page_numbers (plural, comma-separated string) vs page_number (singular)
         page_num = 0
         if "page_numbers" in metadata and metadata["page_numbers"]:
             # e.g. "1, 2, 3" -> take first page
             try:
-                page_num = int(str(metadata["page_numbers"]).split(",")[0].strip())
-            except:
+                raw_pages = str(metadata["page_numbers"])
+                page_num = int(raw_pages.split(",")[0].strip())
+                if i == 0:
+                    print(f"[DEBUG INGESTION] Parsed page_numbers '{raw_pages}' -> page_num={page_num}")
+            except Exception as e:
+                print(f"[DEBUG INGESTION] Failed to parse page_numbers: {e}")
                 page_num = 0
         elif "page_number" in metadata:
             try:
@@ -366,6 +377,13 @@ def retrieve_context(
         if not results:
             return "", []
         
+        # DEBUG: Log raw search results
+        print(f"\n{'='*80} SEARCH RESULTS {'='*80}")
+        print(f"[SEARCH] RAW RESULTS ({len(results)} total):")
+        for i, r in enumerate(results[:5]):  # First 5 results
+            print(f"   [{i}] {r.get('filename')} | Page: {r.get('page_number')} | Chunk: {r.get('chunk_id')}")
+        print(f"{'='*80}\n")
+        
         # Build sources list for frontend and context string for LLM
         sources = []
         context = ""
@@ -382,12 +400,14 @@ def retrieve_context(
             title = filtered_metadata.get('title')
             
             # Add to sources list for frontend (page_number as integer)
-            sources.append({
+            source_entry = {
                 "filename": filename,
                 "page_number": page_number if isinstance(page_number, int) else 0,
                 "title": title,
                 "data_type": data_type
-            })
+            }
+            sources.append(source_entry)
+            print(f"   [SOURCE] {filename} -> page_number={source_entry['page_number']} (raw={page_number}, type={type(page_number).__name__})")
             
             # Build citation with filtered metadata for LLM context
             citation = f"--- SOURCE: {filename} | Page: {page_number}"

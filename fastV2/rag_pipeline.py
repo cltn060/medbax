@@ -44,6 +44,35 @@ def answer_question(
     
     prompt = build_prompt(context, question)
     
+    # DEBUG: Log the COMPLETE prompt with ASCII art banner
+    print(r""" ============================================================================= RAG PROMPT ============================================================================= """)
+    print(f"[DEBUG RAG] CONTEXT LENGTH: {len(context)} chars")
+    print(f"[DEBUG RAG] SOURCES COUNT: {len(sources)}")
+    print(f"\n{'─'*50} SYSTEM PROMPT {'─'*50}")
+    print(f"{SYSTEM_PROMPT}")
+    
+    # Truncate each source section to ~10 words for readability
+    print(f"\n{'─'*50} CONTEXT SOURCES (truncated) {'─'*50}")
+    for line in context.split("--- SOURCE:"):
+        if line.strip():
+            # Extract source header and first ~10 words of content
+            parts = line.split("---", 1)
+            if len(parts) >= 2:
+                source_header = parts[0].strip()
+                content_words = parts[1].split()[:12]  # First 12 words
+                truncated = " ".join(content_words) + "..." if len(parts[1].split()) > 12 else parts[1]
+                print(f"📄 SOURCE: {source_header}")
+                print(f"   {truncated[:100]}...")
+    
+    print(f"\n{'─'*50} USER QUESTION {'─'*50}")
+    # Extract just the question from the prompt
+    if "USER QUESTION:" in prompt:
+        question_part = prompt.split("USER QUESTION:")[1].split("INSTRUCTIONS:")[0].strip()
+        print(f"{question_part}")
+    else:
+        print(f"{prompt[:200]}...")
+    print(f"{'='*80} END RAG PROMPT {'='*80}\n")
+    
     # Build messages array with conversation history
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     

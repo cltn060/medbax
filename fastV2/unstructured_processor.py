@@ -163,7 +163,7 @@ async def normalize_element_async(element, filename: str) -> Optional[Normalized
     base_metadata = {
         "element_id": element.id,
         "source": filename,
-        "page_number": element.metadata.page_number,
+        "page_number": element.metadata.page_number if element.metadata.page_number is not None else 0,
         "original_type": type(element).__name__,
     }
     
