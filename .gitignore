@@ -83,3 +83,8 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+
+
+# GOON
+fast(hybrid search)/

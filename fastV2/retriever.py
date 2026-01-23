@@ -1,65 +1,77 @@
 """
 Retriever module - LanceDB with Hybrid Search (Vector + FTS) and Reranking.
 Production-grade for 1000+ books with disk-based storage.
+
+Following 2026 best practices:
+- Auto-vectorization with embeddings.SourceField() and embeddings.VectorField()
+- Proper FTS index with wait_for_index
+- Hybrid search with LinearCombinationReranker
 """
 
 import os
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Annotated
-
-import numpy as np
+from typing import List, Dict, Any, Optional
 import lancedb
 from lancedb.pydantic import LanceModel, Vector
 from lancedb.embeddings import get_registry
 from lancedb.rerankers import LinearCombinationReranker
-import pyarrow as pa
-import traceback
 
-from embeddings import embed_text, embed_texts
+
 from config import (
     LANCEDB_PATH,
     TABLE_NAME,
-    EMBEDDING_DIMENSION,
     HYBRID_SEARCH_K,
     RERANK_TOP_N,
     VECTOR_WEIGHT,
-    KEYWORD_WEIGHT
+)
+
+# ============================================================================
+# Embedding Model Setup - Using LanceDB's auto-vectorization
+# ============================================================================
+
+# Register OpenAI embeddings for auto-vectorization
+openai_embeddings = get_registry().get("openai").create(
+    name="text-embedding-3-large",
+    dim=3072
 )
 
 # Metadata fields to include when sending context to LLM
-# Filters out unnecessary metadata to reduce token usage
 SOURCE_METADATA_LIMITER = [
     "filename",
     "page_number",
     "title",
-    "data_type"  # e.g., 'table_html' or 'image_summary'
+    "data_type"
 ]
 
 # Initialize LanceDB client
 db = lancedb.connect(LANCEDB_PATH)
 
 # ============================================================================
-# Schema Definition
+# Schema Definition - Using Proper Auto-Vectorization
 # ============================================================================
 
 class MedicalDocument(LanceModel):
     """
     Unified schema for all medical documents.
-    Single table supports multiple collections via collection_name filter.
+    Uses LanceDB auto-vectorization pattern (2026 best practice).
     """
-    text: str  # The actual text content
-    vector: Vector(EMBEDDING_DIMENSION)  # Embedding vector
-    collection_name: str  # Filter by knowledge base (e.g., "cardiology", "neurology")
+    # Auto-vectorized fields
+    text: str = openai_embeddings.SourceField()  # Source text for embedding
+    vector: Vector(3072) = openai_embeddings.VectorField()  # Auto-generated embedding
+    
+    # Metadata fields
+    collection_name: str  # Filter by knowledge base (e.g., "cardiology")
     filename: str  # Source document filename
-    page_number: int  # Page number in original PDF
+    page_number: int  # Page number in original PDF (first page of chunk)
     data_type: str  # 'text', 'table_html', 'image_summary'
     document_id: str  # Unique document identifier
     chunk_id: str  # Unique chunk identifier
     chunk_index: int  # Index within document
-    # Optional metadata fields
+    
+    # Optional metadata
     element_id: Optional[str] = None
     title: Optional[str] = None
-    contains: Optional[str] = None  # Comma-separated list of content types
+    contains: Optional[str] = None
 
 
 # ============================================================================
@@ -69,7 +81,7 @@ class MedicalDocument(LanceModel):
 def get_table():
     """
     Get or create the unified medical knowledge base table.
-    Enables full-text search (FTS) for hybrid search.
+    Creates FTS index for hybrid search.
     """
     if TABLE_NAME not in db.table_names():
         # Create empty table with schema
@@ -78,25 +90,21 @@ def get_table():
             schema=MedicalDocument,
             mode="overwrite"
         )
-        # Create FTS index for hybrid search
-        table.create_fts_index("text", replace=True)
-        print(f"✓ Created table '{TABLE_NAME}' with FTS index")
+        print(f"✓ Created table '{TABLE_NAME}'")
     else:
         table = db.open_table(TABLE_NAME)
-        # Ensure FTS index exists
-        try:
-            table.create_fts_index("text", replace=False)
-        except Exception:
-            pass  # Index already exists
     
     return table
 
 
-def recreate_fts_index():
-    """Recreate FTS index (useful after bulk inserts)."""
-    table = db.open_table(TABLE_NAME)
-    table.create_fts_index("text", replace=True)
-    print(f"✓ Recreated FTS index for '{TABLE_NAME}'")
+def ensure_fts_index():
+    """Create FTS index if it doesn't exist. Call after adding data."""
+    try:
+        table = db.open_table(TABLE_NAME)
+        table.create_fts_index("text", replace=True)
+        print(f"✓ FTS index created/updated for '{TABLE_NAME}'")
+    except Exception as e:
+        print(f"FTS index note: {e}")
 
 
 # ============================================================================
@@ -107,51 +115,33 @@ def collection_exists(collection_name: str) -> bool:
     """Check if a collection has any documents."""
     try:
         table = get_table()
-        results = table.search() \
-            .where(f"collection_name = '{collection_name}'") \
-            .limit(1) \
-            .to_list()
-        exists = len(results) > 0
-        print(f"   📋 collection_exists('{collection_name}'): {len(results)} docs found, exists={exists}")
-        return exists
+        df = table.to_pandas()
+        if df.empty:
+            return False
+        return collection_name in df['collection_name'].values
     except Exception as e:
-        print(f"   ❌ collection_exists('{collection_name}') error: {e}")
+        print(f"Error checking collection: {e}")
         return False
 
 
 def create_collection(collection_name: str):
-    """
-    'Create' a collection (just validates table exists).
-    Collections are virtual - filtered by collection_name.
-    """
-    get_table()  # Ensure table exists
-    return {
-        "collection_name": collection_name,
-        "message": "Collection namespace ready (virtual collection in unified table)"
-    }
+    """Create a collection (just validates table exists)."""
+    get_table()
+    return {"collection_name": collection_name, "message": "Collection ready"}
 
 
 def delete_collection(collection_name: str) -> int:
-    """Delete all documents in a collection. Returns count of deleted chunks."""
+    """Delete all documents in a collection."""
     try:
         table = get_table()
-        
-        # Count before deletion
-        count_results = table.search() \
-            .where(f"collection_name = '{collection_name}'") \
-            .limit(100000) \
-            .to_list()
-        count = len(count_results)
+        df = table.to_pandas()
+        count = len(df[df['collection_name'] == collection_name])
         
         if count == 0:
             return 0
         
-        # Delete by filter
         table.delete(f"collection_name = '{collection_name}'")
-        
-        # Recreate FTS index after bulk delete
-        recreate_fts_index()
-        
+        ensure_fts_index()  # Rebuild FTS after delete
         return count
     except Exception as e:
         print(f"Error deleting collection: {e}")
@@ -167,15 +157,14 @@ def list_collections() -> List[dict]:
         if df.empty:
             return []
         
-        # Group by collection_name
         collections = []
-        for collection_name in df['collection_name'].unique():
-            collection_df = df[df['collection_name'] == collection_name]
+        for name in df['collection_name'].unique():
+            coll_df = df[df['collection_name'] == name]
             collections.append({
-                "collection_id": collection_name,
-                "collection_name": collection_name,
-                "chunk_count": len(collection_df),
-                "document_count": collection_df['document_id'].nunique()
+                "collection_id": name,
+                "collection_name": name,
+                "chunk_count": len(coll_df),
+                "document_count": coll_df['document_id'].nunique()
             })
         
         return collections
@@ -183,41 +172,26 @@ def list_collections() -> List[dict]:
         print(f"Error listing collections: {e}")
         return []
 
+
 def get_collection_stats(collection_name: str) -> dict:
     """Get stats for a specific collection."""
     try:
         table = get_table()
-        results = table.search() \
-            .where(f"collection_name = '{collection_name}'") \
-            .limit(100000) \
-            .to_list()
-        
-        if not results:
-            return {
-                "collection_id": collection_name,
-                "chunk_count": 0,
-                "document_count": 0
-            }
-        
-        # Count unique documents
-        document_ids = set(r['document_id'] for r in results)
+        df = table.to_pandas()
+        coll_df = df[df['collection_name'] == collection_name]
         
         return {
             "collection_id": collection_name,
-            "chunk_count": len(results),
-            "document_count": len(document_ids)
+            "chunk_count": len(coll_df),
+            "document_count": coll_df['document_id'].nunique() if not coll_df.empty else 0
         }
     except Exception as e:
-        print(f"Error getting collection stats: {e}")
-        return {
-            "collection_id": collection_name,
-            "chunk_count": 0,
-            "document_count": 0
-        }
+        print(f"Error getting stats: {e}")
+        return {"collection_id": collection_name, "chunk_count": 0, "document_count": 0}
 
 
 # ============================================================================
-# Document Management
+# Document Management - NO MANUAL EMBEDDING (LanceDB auto-embeds!)
 # ============================================================================
 
 def add_documents(
@@ -227,32 +201,35 @@ def add_documents(
     ids: List[str]
 ) -> int:
     """
-    Add documents to a collection with embeddings.
-    
-    Args:
-        collection_name: Collection to add to
-        texts: List of text chunks
-        metadatas: List of metadata dicts (must include required fields)
-        ids: Unique chunk IDs
-    
-    Returns:
-        Number of chunks added
+    Add documents to a collection.
+    NOTE: No need to embed manually - LanceDB auto-embeds via schema!
     """
     if not texts:
         return 0
     
-    # Generate embeddings
-    embeddings = embed_texts(texts)
-    
-    # Prepare records
+    # Prepare records WITHOUT embeddings (LanceDB will auto-generate)
     records = []
-    for i, (text, embedding, metadata, chunk_id) in enumerate(zip(texts, embeddings, metadatas, ids)):
+    for i, (text, metadata, chunk_id) in enumerate(zip(texts, metadatas, ids)):
+        # Handle page_numbers (plural, comma-separated string) vs page_number (singular)
+        page_num = 0
+        if "page_numbers" in metadata and metadata["page_numbers"]:
+            # e.g. "1, 2, 3" -> take first page
+            try:
+                page_num = int(str(metadata["page_numbers"]).split(",")[0].strip())
+            except:
+                page_num = 0
+        elif "page_number" in metadata:
+            try:
+                page_num = int(metadata["page_number"])
+            except:
+                page_num = 0
+        
         record = {
-            "text": text,
-            "vector": embedding,
+            "text": text,  # LanceDB will auto-embed this!
+            # "vector": ... NOT NEEDED - auto-generated
             "collection_name": collection_name,
             "filename": metadata.get("source", "unknown"),
-            "page_number": int(metadata.get("page_number", 0)),
+            "page_number": page_num,
             "data_type": metadata.get("data_type", "text"),
             "document_id": metadata.get("document_id", "unknown"),
             "chunk_id": chunk_id,
@@ -263,47 +240,30 @@ def add_documents(
         }
         records.append(record)
     
-    # Add to table
+    # Add to table (LanceDB auto-embeds via openai_embeddings)
     table = get_table()
     table.add(records)
     
-    print(f"✓ Added {len(records)} chunks to collection '{collection_name}'")
-    print(f"   📁 LanceDB path: {LANCEDB_PATH}")
-    print(f"   📊 Table name: {TABLE_NAME}")
+    # Rebuild FTS index after adding data
+    ensure_fts_index()
     
-    # Verify documents were added
-    verify_results = table.search() \
-        .where(f"collection_name = '{collection_name}'") \
-        .limit(5) \
-        .to_list()
-    print(f"   ✓ Verification: {len(verify_results)} chunks now in collection")
-    
-    # recreate_fts_index()
-    
+    print(f"✓ Added {len(records)} chunks to '{collection_name}' (auto-embedded)")
     return len(records)
 
 
 def delete_document(collection_name: str, document_id: str) -> int:
-    """Delete all chunks belonging to a document. Returns number deleted."""
+    """Delete all chunks belonging to a document."""
     try:
         table = get_table()
-        
-        # Count before deletion
-        count_results = table.search() \
-            .where(f"collection_name = '{collection_name}' AND document_id = '{document_id}'") \
-            .limit(10000) \
-            .to_list()
-        count = len(count_results)
+        df = table.to_pandas()
+        count = len(df[(df['collection_name'] == collection_name) & 
+                       (df['document_id'] == document_id)])
         
         if count == 0:
             return 0
         
-        # Delete by filter
         table.delete(f"collection_name = '{collection_name}' AND document_id = '{document_id}'")
-        
-        # Recreate FTS index after delete
-        recreate_fts_index()
-        
+        ensure_fts_index()
         return count
     except Exception as e:
         print(f"Error deleting document: {e}")
@@ -314,22 +274,19 @@ def list_documents(collection_name: str) -> List[dict]:
     """List all unique documents in a collection."""
     try:
         table = get_table()
-        results = table.search() \
-            .where(f"collection_name = '{collection_name}'") \
-            .limit(100000) \
-            .to_list()
+        df = table.to_pandas()
+        coll_df = df[df['collection_name'] == collection_name]
         
-        if not results:
+        if coll_df.empty:
             return []
         
-        # Group by document_id
         documents = {}
-        for result in results:
-            doc_id = result['document_id']
+        for _, row in coll_df.iterrows():
+            doc_id = row['document_id']
             if doc_id not in documents:
                 documents[doc_id] = {
                     "document_id": doc_id,
-                    "source": result['filename'],
+                    "source": row['filename'],
                     "chunk_count": 0
                 }
             documents[doc_id]['chunk_count'] += 1
@@ -341,21 +298,12 @@ def list_documents(collection_name: str) -> List[dict]:
 
 
 # ============================================================================
-# Hybrid Search with Reranking
+# Hybrid Search - Following 2026 Best Practices
 # ============================================================================
 
 def filter_metadata(metadata: dict) -> dict:
-    """
-    Filter metadata to only include fields specified in SOURCE_METADATA_LIMITER.
-    Reduces token usage when sending context to LLM.
-    
-    Args:
-        metadata: Full metadata dictionary from search results
-    
-    Returns:
-        Filtered metadata dictionary with only allowed fields
-    """
-    return {key: metadata.get(key) for key in SOURCE_METADATA_LIMITER if key in metadata}
+    """Filter metadata to only include allowed fields."""
+    return {k: metadata.get(k) for k in SOURCE_METADATA_LIMITER if k in metadata}
 
 
 def retrieve_context(
@@ -366,10 +314,10 @@ def retrieve_context(
     """
     Retrieve relevant context using HYBRID SEARCH (Vector + FTS) with reranking.
     
-    Args:
-        query: The user's question
-        collection_name: Which collection to search
-        k: Number of final results after reranking
+    Following 2026 best practices:
+    - Over-fetch + rerank (fetch 50, return top 15)
+    - LinearCombinationReranker with tuned weight
+    - query_type="hybrid" for combined search
     
     Returns:
         Tuple of (context_string, sources_list):
@@ -379,66 +327,41 @@ def retrieve_context(
     try:
         table = get_table()
         
-        # Check if collection has documents
         if not collection_exists(collection_name):
             return "", []
         
-        # Generate query embedding for LanceDB
-        # With Vector() schema, standard list is accepted
-        query_vector = embed_text(query)
-        print(f"   🔍 Generated query embedding (dim: {len(query_vector)})")
+        # Reranker: 0.95 = 95% vector, 5% keyword
+        reranker = LinearCombinationReranker(weight=VECTOR_WEIGHT)
         
-        # ============================================================
-        # HYBRID SEARCH: Vector + Full-Text Search with RRF Fusion
-        # ============================================================
-        
-        # 1. Vector Search (semantic similarity)
-        vector_results = table.search(query_vector, vector_column_name="vector") \
-            .where(f"collection_name = '{collection_name}'") \
-            .limit(HYBRID_SEARCH_K) \
-            .to_list()
-        print(f"   📊 Vector search: {len(vector_results)} results")
-        
-        # 2. Full-Text Search (keyword matching)
+        # ================================================================
+        # HYBRID SEARCH - Correct 2026 Pattern
+        # Just pass the query text - LanceDB auto-embeds for vector search
+        # ================================================================
+        search_method = "hybrid"
         try:
-            fts_results = table.search(query, query_type="fts") \
+            results = table.search(query, query_type="hybrid") \
                 .where(f"collection_name = '{collection_name}'") \
+                .rerank(reranker) \
                 .limit(HYBRID_SEARCH_K) \
                 .to_list()
-            print(f"   📊 FTS search: {len(fts_results)} results")
-        except Exception as fts_error:
-            print(f"   ⚠️ FTS search failed (index may not exist): {fts_error}")
-            fts_results = []
-        
-        # 3. Reciprocal Rank Fusion (RRF) to combine results
-        # RRF score = 1 / (k + rank), where k=60 is standard
-        rrf_k = 60
-        scores = {}  # chunk_id -> score
-        chunk_data = {}  # chunk_id -> result data
-        
-        # Score vector results (weighted by VECTOR_WEIGHT)
-        for rank, result in enumerate(vector_results):
-            chunk_id = result.get('chunk_id', str(rank))
-            rrf_score = VECTOR_WEIGHT / (rrf_k + rank + 1)
-            scores[chunk_id] = scores.get(chunk_id, 0) + rrf_score
-            chunk_data[chunk_id] = result
-        
-        # Score FTS results (weighted by KEYWORD_WEIGHT)
-        for rank, result in enumerate(fts_results):
-            chunk_id = result.get('chunk_id', str(rank + 1000))
-            rrf_score = KEYWORD_WEIGHT / (rrf_k + rank + 1)
-            scores[chunk_id] = scores.get(chunk_id, 0) + rrf_score
-            if chunk_id not in chunk_data:
-                chunk_data[chunk_id] = result
-        
-        # Sort by combined score and get top results
-        sorted_chunks = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        results = [chunk_data[chunk_id] for chunk_id, _ in sorted_chunks[:HYBRID_SEARCH_K]]
-        
-        print(f"   ✓ Hybrid search (RRF fusion): {len(results)} combined results")
-        
-        # Take top K after reranking
-        results = results[:k]
+            
+            # Take top K after reranking
+            results = results[:k]
+            print(f"[SEARCH] ✅ HYBRID SEARCH used ({len(results)} results, weight={VECTOR_WEIGHT})")
+            
+        except Exception as e:
+            print(f"[SEARCH] ⚠️ Hybrid search error: {e}")
+            search_method = "fts_fallback"
+            # Fallback to FTS only
+            try:
+                results = table.search(query, query_type="fts") \
+                    .where(f"collection_name = '{collection_name}'")\
+                    .limit(k) \
+                    .to_list()
+                print(f"[SEARCH] Using FTS fallback ({len(results)} results)")
+            except Exception as e2:
+                print(f"[SEARCH] ❌ FTS fallback error: {e2}")
+                results = []
         
         if not results:
             return "", []
@@ -454,14 +377,14 @@ def retrieve_context(
             filtered_metadata = filter_metadata(result)
             
             filename = filtered_metadata.get('filename', 'Unknown')
-            page_number = filtered_metadata.get('page_number', 'N/A')
+            page_number = filtered_metadata.get('page_number', 0)
             data_type = filtered_metadata.get('data_type', 'text')
             title = filtered_metadata.get('title')
             
-            # Add to sources list for frontend
+            # Add to sources list for frontend (page_number as integer)
             sources.append({
                 "filename": filename,
-                "page_number": page_number,
+                "page_number": page_number if isinstance(page_number, int) else 0,
                 "title": title,
                 "data_type": data_type
             })
@@ -481,7 +404,6 @@ def retrieve_context(
     
     except Exception as e:
         print(f"Error retrieving context: {e}")
-        traceback.print_exc()
         return "", []
 
 
@@ -504,23 +426,14 @@ def get_table_info() -> dict:
         }
     except Exception as e:
         print(f"Error getting table info: {e}")
-        return {
-            "table_name": TABLE_NAME,
-            "total_chunks": 0,
-            "total_collections": 0,
-            "total_documents": 0,
-            "storage_path": LANCEDB_PATH
-        }
+        return {"table_name": TABLE_NAME, "total_chunks": 0}
 
 
 def compact_table():
-    """
-    Compact table to optimize storage and performance.
-    Run this periodically after many deletes/updates.
-    """
+    """Compact table to optimize storage."""
     try:
         table = get_table()
         table.compact_files()
         print(f"✓ Compacted table '{TABLE_NAME}'")
     except Exception as e:
-        print(f"Error compacting table: {e}")
+        print(f"Error compacting: {e}")

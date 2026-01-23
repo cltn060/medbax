@@ -20,10 +20,9 @@ CHUNK_NEW_AFTER_N_CHARS = 4000       # Soft limit - prefers new chunk at boundar
 CHUNK_COMBINE_UNDER_N_CHARS = 1000   # Merges small chunks together
 
 # Hybrid Search Settings
-HYBRID_SEARCH_K = 20  # Retrieve top K candidates before reranking
-RERANK_TOP_N = 5      # Final number of results after reranking
-VECTOR_WEIGHT = 0.7   # Weight for vector similarity in reranking
-KEYWORD_WEIGHT = 0.3  # Weight for keyword/FTS in reranking
+HYBRID_SEARCH_K = 50  # Retrieve MORE candidates (was 20) to find deep semantic matches
+RERANK_TOP_N = 15     # Final number of results after reranking (send more context to LLM)
+VECTOR_WEIGHT = 0.95  # Almost purely semantic (since embedding-3-large is excellent)
 
 # Celery Settings (Background Task Processing)
 CELERY_BROKER_URL = "redis://localhost:6379/0"
