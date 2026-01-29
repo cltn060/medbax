@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
-import { Bot, Sparkles, Plus, Image, ArrowUp, History, Loader2, Database, ChevronDown, ExternalLink, ArrowLeft, X, Zap, User, Trash2, Info } from "lucide-react";
+import { Bot, Sparkles, Plus, Image, ArrowUp, History, Loader2, Database, ChevronDown, ExternalLink, ArrowLeft, X, Zap, User, Trash2, Info, Pill, Heart, FileText, Microscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
 import { HealthSnapshotPanel } from "./HealthSnapshotPanel";
@@ -556,11 +556,11 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                     Hi there, <span className="text-slate-500 dark:text-zinc-500">{currentUser?.name?.split(' ')[0] || 'User'}</span>
                                 </h1>
                                 <h2 className="text-2xl sm:text-3xl md:text-5xl font-medium text-slate-400 dark:text-zinc-500 mb-4 md:mb-8 font-kalice tracking-tight animate-fade-in-up [animation-delay:100ms]">
-                                    What would like to know?
+                                    Your Personal Healthcare Companion
                                 </h2>
 
                                 <div className="text-xs md:text-sm text-slate-500 dark:text-zinc-500 mb-3 md:mb-6 animate-fade-in-up [animation-delay:200ms]">
-                                    Use one of the most common prompts below or use your own to begin
+                                    I analyze your health records and trusted medical knowledge bases to provide personalized answers to your health questions.
                                 </div>
 
                                 {/* Prompt Suggestions - 2 on mobile, 4 on desktop */}
@@ -569,26 +569,26 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                         {
                                             title: "Review my recent lab results",
                                             subtitle: "and explain what they mean",
-                                            icon: "🔬",
+                                            icon: <Microscope className="w-5 h-5 text-slate-500 dark:text-zinc-400" />,
                                             prompt: "Can you review my recent lab results and explain what they mean in simple terms?"
                                         },
                                         {
                                             title: "Explain my medications",
                                             subtitle: "and potential interactions",
-                                            icon: "💊",
+                                            icon: <Pill className="w-5 h-5 text-slate-500 dark:text-zinc-400" />,
                                             prompt: "Can you explain my current medications, their purposes, and any potential interactions I should be aware of?"
                                         },
                                         {
                                             title: "Help me understand my",
                                             subtitle: "chronic condition better",
-                                            icon: "❤️",
+                                            icon: <Heart className="w-5 h-5 text-slate-500 dark:text-zinc-400" />,
                                             prompt: "I'd like to better understand my chronic condition. Can you provide information about management strategies and lifestyle considerations?",
                                             hideOnMobile: true
                                         },
                                         {
                                             title: "Create a health summary",
                                             subtitle: "for my upcoming appointment",
-                                            icon: "📋",
+                                            icon: <FileText className="w-5 h-5 text-slate-500 dark:text-zinc-400" />,
                                             prompt: "Can you create a summary of my health history and current concerns for my upcoming doctor's appointment?",
                                             hideOnMobile: true
                                         }
