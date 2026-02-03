@@ -143,13 +143,10 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
     // Combine real messages with optimistic/pending messages for display
     const [showPendingAssistant, setShowPendingAssistant] = useState(false);
 
-    // Delay showing the assistant response
+    // Show assistant response indicator immediately
     useEffect(() => {
         if (chatId && (isWaitingForResponse || streamingResponse)) {
-            const timer = setTimeout(() => {
-                setShowPendingAssistant(true);
-            }, 300);
-            return () => clearTimeout(timer);
+            setShowPendingAssistant(true);
         } else {
             setShowPendingAssistant(false);
         }
@@ -288,8 +285,8 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
             }
         };
 
-        const timer = setTimeout(fetchAIResponse, 100);
-        return () => clearTimeout(timer);
+        // Start AI fetch immediately
+        fetchAIResponse();
     }, [chatId, searchParams, router, sendMessageMutation]);
 
     // Build medical context string from patient data
