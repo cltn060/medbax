@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
-import { Bot, Sparkles, Plus, Image, ArrowUp, History, Loader2, Database, ChevronDown, ExternalLink, ArrowLeft, X, Zap, User, Trash2, Info, Pill, Heart, FileText, Microscope } from "lucide-react";
+import { Bot, Sparkles, Plus, Image, ArrowUp, History, Loader2, Database, ChevronDown, ExternalLink, ArrowLeft, X, Zap, User, Trash2, Info, Pill, Heart, FileText, Microscope, AlertCircle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Id } from "../../../convex/_generated/dataModel";
 import { HealthSnapshotPanel } from "./HealthSnapshotPanel";
@@ -70,8 +70,9 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
     const [streamingResponse, setStreamingResponse] = useState("");
     const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
 
-    // Optimistic UI
-    const [optimisticUserMessage, setOptimisticUserMessage] = useState<string | null>(null);
+    // Optimistic UI with stable clientId
+    const [optimisticUserMessage, setOptimisticUserMessage] = useState<{ content: string; clientId: string } | null>(null);
+    const [failedMessages, setFailedMessages] = useState<Set<string>>(new Set());
 
 
     // PDF Viewer State
@@ -155,7 +156,12 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
     const displayMessages = [
         ...messages,
-        ...(chatId && optimisticUserMessage ? [{ role: "user" as const, content: optimisticUserMessage, _id: "optimistic-user" }] : []),
+        ...(chatId && optimisticUserMessage ? [{
+            role: "user" as const,
+            content: optimisticUserMessage.content,
+            clientId: optimisticUserMessage.clientId,
+            _id: `optimistic-${optimisticUserMessage.clientId}`
+        }] : []),
         ...(chatId && showPendingAssistant && (isWaitingForResponse || streamingResponse) ? [{
             role: "assistant" as const,
             content: streamingResponse || "__TYPING__",
@@ -163,10 +169,10 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         }] : []),
     ];
 
-    // Auto-scroll to bottom on new messages
+    // Auto-scroll to bottom on new messages (including optimistic)
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, viewingDocument]); // Also scroll when view changes
+    }, [displayMessages.length, streamingResponse, viewingDocument]); // Scroll when any message appears
 
     // Auto-resize textarea
     useEffect(() => {
@@ -314,7 +320,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         return `[PATIENT MEDICAL CONTEXT]\n${sections.join("\n")}\n[END CONTEXT]\n\n`;
     };
 
-    const handleSend = async (messageOverride?: string) => {
+    const handleSend = async (messageOverride?: string, retryClientId?: string) => {
         const messageContent = messageOverride?.trim() || input.trim();
         if (!messageContent || sending) return;
 
@@ -327,11 +333,23 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         const medicalContext = buildMedicalContext();
         const fullMessage = medicalContext + messageContent;
 
+        // Generate stable clientId (or reuse if retrying)
+        const clientId = retryClientId || crypto.randomUUID();
+
         setSending(true);
         setStreamingResponse("");
         setIsWaitingForResponse(true);
 
-        setOptimisticUserMessage(messageContent);
+        // Clear from failed if retrying
+        if (retryClientId) {
+            setFailedMessages(prev => {
+                const next = new Set(prev);
+                next.delete(retryClientId);
+                return next;
+            });
+        }
+
+        setOptimisticUserMessage({ content: messageContent, clientId });
         setInput("");
 
         if (textareaRef.current) {
@@ -358,6 +376,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     chatId: newChatId as Id<"chats">,
                     role: "user",
                     content: messageContent,
+                    clientId,
                 });
 
                 setOptimisticUserMessage(null);
@@ -369,6 +388,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                 chatId: chatIdToUse as Id<"chats">,
                 role: "user",
                 content: messageContent,
+                clientId,
             });
 
             setOptimisticUserMessage(null);
@@ -448,6 +468,10 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
         } catch (err) {
             console.error("Failed to send:", err);
+            // Mark message as failed (keep optimistic message visible with error indicator)
+            if (optimisticUserMessage?.clientId) {
+                setFailedMessages(prev => new Set(prev).add(optimisticUserMessage.clientId));
+            }
         } finally {
             setSending(false);
         }
@@ -639,129 +663,148 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
 
                         {/* Messages List */}
                         <div className="max-w-3xl mx-auto w-full space-y-6">
-                            {displayMessages.map((msg, idx) => (
-                                <div
-                                    key={msg._id || idx}
-                                    className={cn(
-                                        "flex w-full",
-                                        msg.role === "user" ? "justify-end animate-slide-in-right" : "justify-start animate-slide-in-left"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "rounded-2xl px-4 py-2.5 transition-all duration-200 overflow-hidden",
-                                        msg.role === "user" ? "max-w-[85%]" : "max-w-full",
-                                        msg.role === "user"
-                                            ? "bg-indigo-600 text-white"
-                                            : "bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white"
-                                    )}>
-                                        {msg.role === "assistant" && (
-                                            <div className="flex items-center gap-2 mb-1.5">
-                                                <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">MedBax AI</span>
-                                                {msg.content === "__TYPING__" || msg._id === "pending-assistant" && streamingResponse ? (
-                                                    <Loader2 className="h-3 w-3 text-indigo-500 animate-spin" />
-                                                ) : null}
-                                            </div>
+                            {displayMessages.map((msg, idx) => {
+                                // Use clientId as stable key to prevent re-animation
+                                const messageKey = ('clientId' in msg && msg.clientId) || msg._id || idx;
+                                const isFailed = 'clientId' in msg && msg.clientId && failedMessages.has(msg.clientId);
+
+                                return (
+                                    <div
+                                        key={messageKey}
+                                        className={cn(
+                                            "flex w-full items-end gap-2",
+                                            msg.role === "user" ? "justify-end animate-slide-in-right" : "justify-start animate-slide-in-left"
                                         )}
-
-                                        {/* Typing indicator dots */}
-                                        {msg.content === "__TYPING__" ? (
-                                            <div className="flex items-center gap-1 py-1">
-                                                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0ms]"></span>
-                                                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:150ms]"></span>
-                                                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:300ms]"></span>
-                                            </div>
-                                        ) : (
-                                            <div className="text-sm leading-relaxed markdown-content break-words overflow-x-auto">
-                                                <ReactMarkdown
-                                                    urlTransform={(url) => url}
-                                                    components={{
-                                                        // Handle citation clicks
-                                                        a: ({ node, href, children, ...props }) => {
-                                                            if (href?.startsWith('citation:')) {
-                                                                // Extract filename and page from href
-                                                                // citation:filename.pdf?page=X
-                                                                const [filePart, queryPart] = href.replace('citation:', '').split('?');
-                                                                const pageMatch = queryPart?.match(/page=(\d+)/);
-                                                                const page = pageMatch ? parseInt(pageMatch[1]) : 1;
-
-                                                                const decodedFilename = decodeURIComponent(filePart);
-
-                                                                return (
-                                                                    <span
-                                                                        role="button"
-                                                                        tabIndex={0}
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                            setViewingDocument({ filename: decodedFilename, page });
-                                                                        }}
-                                                                        onKeyDown={(e) => {
-                                                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                                                e.preventDefault();
-                                                                                setViewingDocument({ filename: decodedFilename, page });
-                                                                            }
-                                                                        }}
-                                                                        className="inline-flex items-center gap-1 px-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer font-semibold mx-1 text-xs align-middle transform -translate-y-px"
-                                                                    >
-                                                                        {children}
-                                                                        <ExternalLink className="h-3 w-3" />
-                                                                    </span>
-                                                                );
-                                                            }
-                                                            return <a href={href} {...props} className="text-indigo-600 hover:underline">{children}</a>;
-                                                        },
-                                                        strong: ({ node, ...props }) => <span className="font-bold text-indigo-700 dark:text-indigo-400" {...props} />,
-                                                        ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-2" {...props} />,
-                                                        ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-2" {...props} />,
-                                                        li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                                                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap break-words" {...props} />,
-                                                        code: ({ node, className, children, ...props }) => {
-                                                            const isInline = !className;
-                                                            if (isInline) {
-                                                                return <code className="bg-slate-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-xs break-all" {...props}>{children}</code>;
-                                                            }
-                                                            return (
-                                                                <code className="block bg-slate-100 dark:bg-zinc-800 p-2 rounded text-xs overflow-x-auto whitespace-pre" {...props}>
-                                                                    {children}
-                                                                </code>
-                                                            );
-                                                        },
-                                                        pre: ({ node, ...props }) => <pre className="overflow-x-auto my-2 rounded bg-slate-100 dark:bg-zinc-800" {...props} />,
-                                                    }}
-                                                >
-                                                    {preprocessContent(msg.content)}
-                                                </ReactMarkdown>
-                                            </div>
+                                    >
+                                        {/* Error indicator for failed messages (iMessage style) */}
+                                        {msg.role === "user" && isFailed && (
+                                            <button
+                                                onClick={() => handleSend(msg.content, 'clientId' in msg ? msg.clientId : undefined)}
+                                                className="flex items-center gap-1 p-1.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors group"
+                                                title="Failed to send. Tap to retry."
+                                            >
+                                                <AlertCircle className="h-4 w-4" />
+                                                <RotateCcw className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </button>
                                         )}
-
-                                        {'sources' in msg && msg.sources && msg.sources.length > 0 && (() => {
-                                            // Deduplicate sources by title (book name) - show each book only once
-                                            const uniqueBooks = Array.from(
-                                                new Set(msg.sources.map((src: Source) => src.title))
-                                            );
-
-                                            return (
-                                                <div className="mt-3 pt-2 border-t border-slate-200 dark:border-zinc-800 animate-fade-in">
-                                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-1.5 block">Sources Used</span>
-                                                    <div className="flex flex-wrap gap-1.5 mt-1">
-                                                        {uniqueBooks.map((bookName: string, i: number) => (
-                                                            <div
-                                                                key={i}
-                                                                className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800/50 rounded-full px-2.5 py-1 border border-slate-200 dark:border-zinc-700"
-                                                            >
-                                                                <Database className="h-3 w-3 text-indigo-500" />
-                                                                <span className="text-[10px] font-medium text-slate-600 dark:text-zinc-400 truncate max-w-[200px]">
-                                                                    {bookName}
-                                                                </span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                        <div className={cn(
+                                            "rounded-2xl px-4 py-2.5 transition-all duration-200 overflow-hidden",
+                                            msg.role === "user" ? "max-w-[85%]" : "max-w-full",
+                                            msg.role === "user"
+                                                ? isFailed
+                                                    ? "bg-indigo-400 text-white/80" // Dimmed for failed
+                                                    : "bg-indigo-600 text-white"
+                                                : "bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white"
+                                        )}>
+                                            {msg.role === "assistant" && (
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">MedBax AI</span>
+                                                    {msg.content === "__TYPING__" || msg._id === "pending-assistant" && streamingResponse ? (
+                                                        <Loader2 className="h-3 w-3 text-indigo-500 animate-spin" />
+                                                    ) : null}
                                                 </div>
-                                            );
-                                        })()}
+                                            )}
+
+                                            {/* Typing indicator dots */}
+                                            {msg.content === "__TYPING__" ? (
+                                                <div className="flex items-center gap-1 py-1">
+                                                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0ms]"></span>
+                                                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:150ms]"></span>
+                                                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:300ms]"></span>
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm leading-relaxed markdown-content break-words overflow-x-auto">
+                                                    <ReactMarkdown
+                                                        urlTransform={(url) => url}
+                                                        components={{
+                                                            // Handle citation clicks
+                                                            a: ({ node, href, children, ...props }) => {
+                                                                if (href?.startsWith('citation:')) {
+                                                                    // Extract filename and page from href
+                                                                    // citation:filename.pdf?page=X
+                                                                    const [filePart, queryPart] = href.replace('citation:', '').split('?');
+                                                                    const pageMatch = queryPart?.match(/page=(\d+)/);
+                                                                    const page = pageMatch ? parseInt(pageMatch[1]) : 1;
+
+                                                                    const decodedFilename = decodeURIComponent(filePart);
+
+                                                                    return (
+                                                                        <span
+                                                                            role="button"
+                                                                            tabIndex={0}
+                                                                            onClick={(e) => {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                setViewingDocument({ filename: decodedFilename, page });
+                                                                            }}
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                                    e.preventDefault();
+                                                                                    setViewingDocument({ filename: decodedFilename, page });
+                                                                                }
+                                                                            }}
+                                                                            className="inline-flex items-center gap-1 px-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors cursor-pointer font-semibold mx-1 text-xs align-middle transform -translate-y-px"
+                                                                        >
+                                                                            {children}
+                                                                            <ExternalLink className="h-3 w-3" />
+                                                                        </span>
+                                                                    );
+                                                                }
+                                                                return <a href={href} {...props} className="text-indigo-600 hover:underline">{children}</a>;
+                                                            },
+                                                            strong: ({ node, ...props }) => <span className="font-bold text-indigo-700 dark:text-indigo-400" {...props} />,
+                                                            ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-2" {...props} />,
+                                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-2" {...props} />,
+                                                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                                                            p: ({ node, ...props }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap break-words" {...props} />,
+                                                            code: ({ node, className, children, ...props }) => {
+                                                                const isInline = !className;
+                                                                if (isInline) {
+                                                                    return <code className="bg-slate-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-xs break-all" {...props}>{children}</code>;
+                                                                }
+                                                                return (
+                                                                    <code className="block bg-slate-100 dark:bg-zinc-800 p-2 rounded text-xs overflow-x-auto whitespace-pre" {...props}>
+                                                                        {children}
+                                                                    </code>
+                                                                );
+                                                            },
+                                                            pre: ({ node, ...props }) => <pre className="overflow-x-auto my-2 rounded bg-slate-100 dark:bg-zinc-800" {...props} />,
+                                                        }}
+                                                    >
+                                                        {preprocessContent(msg.content)}
+                                                    </ReactMarkdown>
+                                                </div>
+                                            )}
+
+                                            {'sources' in msg && msg.sources && msg.sources.length > 0 && (() => {
+                                                // Deduplicate sources by title (book name) - show each book only once
+                                                const uniqueBooks = Array.from(
+                                                    new Set(msg.sources.map((src: Source) => src.title))
+                                                );
+
+                                                return (
+                                                    <div className="mt-3 pt-2 border-t border-slate-200 dark:border-zinc-800 animate-fade-in">
+                                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 mb-1.5 block">Sources Used</span>
+                                                        <div className="flex flex-wrap gap-1.5 mt-1">
+                                                            {uniqueBooks.map((bookName: string, i: number) => (
+                                                                <div
+                                                                    key={i}
+                                                                    className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800/50 rounded-full px-2.5 py-1 border border-slate-200 dark:border-zinc-700"
+                                                                >
+                                                                    <Database className="h-3 w-3 text-indigo-500" />
+                                                                    <span className="text-[10px] font-medium text-slate-600 dark:text-zinc-400 truncate max-w-[200px]">
+                                                                        {bookName}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                             <div ref={messagesEndRef} />
                         </div>
                     </div>

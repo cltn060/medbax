@@ -123,6 +123,7 @@ export default defineSchema({
     chatId: v.id("chats"),
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
+    clientId: v.optional(v.string()), // Client-generated ID for stable React keys
     sources: v.optional(
       v.array(
         v.object({

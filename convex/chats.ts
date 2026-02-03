@@ -61,6 +61,7 @@ export const sendMessage = mutation({
         chatId: v.id("chats"),
         role: v.union(v.literal("user"), v.literal("assistant")),
         content: v.string(),
+        clientId: v.optional(v.string()), // Client-generated ID for stable React keys
         sources: v.optional(
             v.array(
                 v.object({
@@ -126,6 +127,7 @@ export const sendMessage = mutation({
             chatId: args.chatId,
             role: args.role,
             content: args.content,
+            clientId: args.clientId,
             sources: args.sources,
             createdAt: Date.now(),
         });
