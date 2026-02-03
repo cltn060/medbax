@@ -509,14 +509,14 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                                     setKbBrowserOpen(!kbBrowserOpen);
                                 }}
                                 className={cn(
-                                    "p-2 md:p-1.5 rounded-lg md:rounded-md transition-colors touch-target md:min-w-0 md:min-h-0",
+                                    "p-1.5 rounded-md transition-colors",
                                     kbBrowserOpen
                                         ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                                         : "text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
                                 )}
                                 title="Knowledge bases"
                             >
-                                <Database className="h-5 w-5 md:h-4 md:w-4" />
+                                <Database className="h-4 w-4" />
                             </button>
                             <div className="flex-1 min-w-0">
                                 {currentChat ? (
@@ -532,14 +532,14 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                             <button
                                 onClick={() => setHealthPanelOpen(!healthPanelOpen)}
                                 className={cn(
-                                    "p-2 md:p-1.5 rounded-lg md:rounded-md transition-colors touch-target md:min-w-0 md:min-h-0",
+                                    "p-1.5 rounded-md transition-colors",
                                     healthPanelOpen
                                         ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                                         : "text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-600 dark:hover:text-zinc-300"
                                 )}
                                 title="Health context"
                             >
-                                <User className="h-5 w-5 md:h-4 md:w-4" />
+                                <User className="h-4 w-4" />
                             </button>
                         </div>
                     )}
