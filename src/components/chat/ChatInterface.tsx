@@ -240,6 +240,9 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         router.replace(`/dashboard/chat/${chatId}`);
 
         const fetchAIResponse = async () => {
+            // Generate stable clientId for assistant response
+            const assistantClientId = crypto.randomUUID();
+            setPendingAssistantClientId(assistantClientId);
             setIsWaitingForResponse(true);
 
             let fullResponse = "";
@@ -253,6 +256,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
             const handleError = (error: Error) => {
                 console.error("Chat error:", error);
                 setIsWaitingForResponse(false);
+                setPendingAssistantClientId(null);
             };
 
             const handleComplete = async (sources?: { title: string; snippet: string; sourceType: "kb_document" | "patient_document" | "chat_attachment"; chromaDocumentId?: string; pageNumber?: number }[]) => {
@@ -269,10 +273,12 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     chatId: chatId as Id<"chats">,
                     role: "assistant",
                     content: fullResponse,
+                    clientId: assistantClientId,
                     sources: formattedSources,
                 });
                 setStreamingResponse("");
                 setIsWaitingForResponse(false);
+                setPendingAssistantClientId(null);
             };
 
             if (pendingKB) {
@@ -341,12 +347,14 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         const medicalContext = buildMedicalContext();
         const fullMessage = medicalContext + messageContent;
 
-        // Generate stable clientId (or reuse if retrying)
+        // Generate stable clientIds upfront (or reuse if retrying)
         const clientId = retryClientId || crypto.randomUUID();
+        const assistantClientId = crypto.randomUUID(); // For the AI response
 
         setSending(true);
         setStreamingResponse("");
         setIsWaitingForResponse(true);
+        setPendingAssistantClientId(assistantClientId); // Set BEFORE typing indicator appears
 
         // Clear from failed if retrying
         if (retryClientId) {
@@ -408,10 +416,6 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     content: m.content
                 }));
 
-                // Generate stable clientId for assistant response
-                const assistantClientId = crypto.randomUUID();
-                setPendingAssistantClientId(assistantClientId);
-
                 await queryKnowledgeBaseStream(
                     selectedKB,
                     fullMessage,
@@ -455,10 +459,6 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     role: m.role as "user" | "assistant",
                     content: m.content
                 }));
-
-                // Generate stable clientId for assistant response
-                const assistantClientId = crypto.randomUUID();
-                setPendingAssistantClientId(assistantClientId);
 
                 await generalChatStream(
                     fullMessage,
