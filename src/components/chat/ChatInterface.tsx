@@ -73,6 +73,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
     // Optimistic UI with stable clientId
     const [optimisticUserMessage, setOptimisticUserMessage] = useState<{ content: string; clientId: string } | null>(null);
     const [failedMessages, setFailedMessages] = useState<Set<string>>(new Set());
+    const [pendingAssistantClientId, setPendingAssistantClientId] = useState<string | null>(null);
 
 
     // PDF Viewer State
@@ -154,6 +155,11 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         }
     }, [chatId, isWaitingForResponse, streamingResponse]);
 
+    // Check if the pending assistant message has already been saved to DB
+    const pendingAssistantSaved = pendingAssistantClientId
+        ? messages.some(m => m.clientId === pendingAssistantClientId)
+        : false;
+
     const displayMessages = [
         ...messages,
         ...(chatId && optimisticUserMessage ? [{
@@ -162,10 +168,12 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
             clientId: optimisticUserMessage.clientId,
             _id: `optimistic-${optimisticUserMessage.clientId}`
         }] : []),
-        ...(chatId && showPendingAssistant && (isWaitingForResponse || streamingResponse) ? [{
+        // Only show pending assistant if not already saved to DB
+        ...(chatId && showPendingAssistant && (isWaitingForResponse || streamingResponse) && !pendingAssistantSaved ? [{
             role: "assistant" as const,
             content: streamingResponse || "__TYPING__",
-            _id: "pending-assistant"
+            clientId: pendingAssistantClientId,
+            _id: `pending-${pendingAssistantClientId || 'assistant'}`
         }] : []),
     ];
 
@@ -400,6 +408,10 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     content: m.content
                 }));
 
+                // Generate stable clientId for assistant response
+                const assistantClientId = crypto.randomUUID();
+                setPendingAssistantClientId(assistantClientId);
+
                 await queryKnowledgeBaseStream(
                     selectedKB,
                     fullMessage,
@@ -411,6 +423,7 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     (error) => {
                         console.error("RAG error:", error);
                         setIsWaitingForResponse(false);
+                        setPendingAssistantClientId(null);
                     },
                     async (sources) => {
                         // Convert RAG sources to schema-compatible format
@@ -426,11 +439,13 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                             chatId: chatIdToUse as Id<"chats">,
                             role: "assistant",
                             content: fullResponse,
+                            clientId: assistantClientId,
                             sources: formattedSources,
                         });
                         await incrementQueryCount(); // Track usage
                         setStreamingResponse("");
                         setIsWaitingForResponse(false);
+                        setPendingAssistantClientId(null);
                     },
                     conversationHistory
                 );
@@ -440,6 +455,10 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     role: m.role as "user" | "assistant",
                     content: m.content
                 }));
+
+                // Generate stable clientId for assistant response
+                const assistantClientId = crypto.randomUUID();
+                setPendingAssistantClientId(assistantClientId);
 
                 await generalChatStream(
                     fullMessage,
@@ -451,16 +470,19 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
                     (error) => {
                         console.error("Chat error:", error);
                         setIsWaitingForResponse(false);
+                        setPendingAssistantClientId(null);
                     },
                     async () => {
                         await sendMessageMutation({
                             chatId: chatIdToUse as Id<"chats">,
                             role: "assistant",
                             content: fullResponse,
+                            clientId: assistantClientId,
                         });
                         await incrementQueryCount(); // Track usage
                         setStreamingResponse("");
                         setIsWaitingForResponse(false);
+                        setPendingAssistantClientId(null);
                     },
                     conversationHistory
                 );
