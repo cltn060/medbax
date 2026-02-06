@@ -42,29 +42,42 @@ export default function LandingPage() {
     setIsLoading(true);
 
     try {
-      if (isSignedIn && patient) {
-        // User is logged in - create a new chat and redirect
-        const messageContent = prompt.trim();
-        const title = messageContent.length > 40
-          ? messageContent.substring(0, 40) + '...'
-          : messageContent;
+      if (isSignedIn) {
+        // User is logged in
+        if (patient) {
+          // User has a patient record - create a new chat and redirect
+          const messageContent = prompt.trim();
+          const title = messageContent.length > 40
+            ? messageContent.substring(0, 40) + '...'
+            : messageContent;
 
-        const newChatId = await createChatMutation({
-          patientId: patient._id,
-          title: title,
-        });
+          const newChatId = await createChatMutation({
+            patientId: patient._id,
+            title: title,
+          });
 
-        // Save the user's message to the chat
-        await sendMessageMutation({
-          chatId: newChatId,
-          role: "user",
-          content: messageContent,
-        });
+          // Save the user's message to the chat
+          await sendMessageMutation({
+            chatId: newChatId,
+            role: "user",
+            content: messageContent,
+          });
 
-        // Redirect to the new chat with the prompt as a pending query
-        router.push(`/dashboard/chat/${newChatId}?pending=${encodeURIComponent(messageContent)}`);
+          // Redirect to the new chat with the prompt as a pending query
+          router.push(`/dashboard/chat/${newChatId}?pending=${encodeURIComponent(messageContent)}`);
+        } else if (patient === null) {
+          // User is logged in but has no patient record - save prompt and redirect to onboarding
+          localStorage.setItem('pendingPrompt', prompt.trim());
+          router.push('/onboarding');
+        } else {
+          // Patient data is still loading (undefined) - wait a bit and retry
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 500);
+        }
       } else {
-        // User is not logged in - show signup modal after brief delay
+        // User is not logged in - save prompt to localStorage and show signup modal
+        localStorage.setItem('pendingPrompt', prompt.trim());
         setTimeout(() => {
           setIsLoading(false);
           setShowSignup(true);

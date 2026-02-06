@@ -22,6 +22,7 @@ const PDFViewer = dynamic(() => import("./PDFViewer").then(mod => mod.PDFViewer)
 interface ChatInterfaceProps {
     chatId?: string;
     patientId: string;
+    landingPrompt?: string; // Prompt from landing page before login
 }
 
 interface Source {
@@ -35,7 +36,7 @@ interface Source {
     chromaDocumentId?: string; // For indexed KB doc lookup
 }
 
-export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
+export function ChatInterface({ chatId, patientId, landingPrompt }: ChatInterfaceProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -227,12 +228,28 @@ export function ChatInterface({ chatId, patientId }: ChatInterfaceProps) {
         }
     }, [chatId, publicKBs, selectedKB]);
 
+    // Auto-send landing prompt from pre-login landing page
+    const landingPromptSent = useRef(false);
+    useEffect(() => {
+        if (landingPrompt && !landingPromptSent.current && !sending && publicKBs !== undefined) {
+            landingPromptSent.current = true;
+            // Clean up the URL by removing the query parameter
+            router.replace('/dashboard/chat');
+            // Auto-send the prompt
+            handleSend(landingPrompt);
+        }
+    }, [landingPrompt, sending, publicKBs]);
+
     // Handle pending AI response after navigation
+    const pendingQueryProcessed = useRef(false);
     useEffect(() => {
         const pendingQuery = searchParams.get('pending');
         const pendingKB = searchParams.get('kb');
 
-        if (!pendingQuery || !chatId) return;
+        if (!pendingQuery || !chatId || pendingQueryProcessed.current) return;
+
+        // Mark as processed to prevent duplicate execution
+        pendingQueryProcessed.current = true;
 
         router.replace(`/dashboard/chat/${chatId}`);
 

@@ -187,7 +187,14 @@ function OnboardingFlow() {
         setLoading(true);
         try {
             await completeOnboarding();
-            router.push("/dashboard/chat");
+            // Check for pending prompt from landing page
+            const pendingPrompt = localStorage.getItem('pendingPrompt');
+            if (pendingPrompt) {
+                localStorage.removeItem('pendingPrompt');
+                router.push(`/dashboard/chat?landingPrompt=${encodeURIComponent(pendingPrompt)}`);
+            } else {
+                router.push("/dashboard/chat");
+            }
         } catch (e) {
             console.error("Failed to complete onboarding", e);
         } finally {
